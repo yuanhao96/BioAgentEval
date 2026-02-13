@@ -2,11 +2,11 @@
 import json
 import pytest
 
-from pankeval.graders import CodeGrader
-from pankeval.loader import load_suite
-from pankeval.models import AgentResponse, Transcript, TranscriptEvent
-from pankeval.reporter import EvalReporter
-from pankeval.runner import EvalRunner
+from bioagenteval.graders import CodeGrader
+from bioagenteval.loader import load_suite
+from bioagenteval.models import AgentResponse, Transcript, TranscriptEvent
+from bioagenteval.reporter import EvalReporter
+from bioagenteval.runner import EvalRunner
 
 
 SUITE_YAML = """\

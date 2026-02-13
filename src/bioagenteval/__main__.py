@@ -4,23 +4,23 @@ from pathlib import Path
 
 import click
 
-from pankeval.graders import CodeGrader, HumanGrader, ModelGrader
-from pankeval.loader import load_suite
-from pankeval.reporter import EvalReporter
-from pankeval.runner import EvalRunner
+from bioagenteval.graders import CodeGrader, HumanGrader, ModelGrader
+from bioagenteval.loader import load_suite
+from bioagenteval.reporter import EvalReporter
+from bioagenteval.runner import EvalRunner
 
 
 @click.group()
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging.")
 def cli(verbose):
-    """PanKgraph evaluation harness."""
+    """BioAgentEval — evaluation harness for biomedical KG agents."""
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
 
 
 @cli.command()
 @click.argument("suite_path", type=click.Path(exists=True))
-@click.option("--agent", "-a", required=True, help="Agent module path, e.g. pankeval.agents.baseline_qa:BaselineQAAgent")
+@click.option("--agent", "-a", required=True, help="Agent module path, e.g. bioagenteval.agents.baseline_qa:BaselineQAAgent")
 @click.option("--output", "-o", default="eval_report.json", help="Output JSON path.")
 @click.option("--skip-model-grader", is_flag=True, help="Skip model-based grading.")
 def run(suite_path, agent, output, skip_model_grader):

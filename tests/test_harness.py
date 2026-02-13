@@ -1,6 +1,6 @@
 import pytest
-from pankeval.harness import AgentHarness
-from pankeval.models import AgentResponse, Task, Transcript
+from bioagenteval.harness import AgentHarness
+from bioagenteval.models import AgentResponse, Task, Transcript
 
 
 class FakeAgent:

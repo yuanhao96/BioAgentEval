@@ -1,5 +1,5 @@
 import pytest
-from pankeval.models import (
+from bioagenteval.models import (
     Task, GraderConfig, EvalSuite,
     TranscriptEvent, Transcript,
     GradeResult, TrialResult, EvalResult,

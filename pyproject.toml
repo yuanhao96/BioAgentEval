@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pankeval"
+name = "bioagenteval"
 version = "0.1.0"
 requires-python = ">=3.9"
 dependencies = [
@@ -18,7 +18,7 @@ dependencies = [
 dev = ["pytest>=7.0", "pytest-mock>=3.10"]
 
 [project.scripts]
-pankeval = "pankeval.__main__:cli"
+bioagenteval = "bioagenteval.__main__:cli"
 
 [tool.setuptools.packages.find]
 where = ["src"]

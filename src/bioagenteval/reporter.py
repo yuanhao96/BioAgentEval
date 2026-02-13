@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from pankeval.models import EvalResult
+from bioagenteval.models import EvalResult
 
 
 class EvalReporter:

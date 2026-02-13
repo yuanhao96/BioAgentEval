@@ -1,11 +1,11 @@
 import pytest
 from unittest.mock import MagicMock
 
-from pankeval.models import (
+from bioagenteval.models import (
     AgentResponse, EvalResult, GradeResult, GraderConfig,
     Task, Transcript, TranscriptEvent, TrialResult,
 )
-from pankeval.runner import EvalRunner
+from bioagenteval.runner import EvalRunner
 
 
 class FakeAgent:

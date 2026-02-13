@@ -1,7 +1,7 @@
 import pytest
-from pankeval.graders.base import BaseGrader
-from pankeval.graders.code_grader import CodeGrader
-from pankeval.models import (
+from bioagenteval.graders.base import BaseGrader
+from bioagenteval.graders.code_grader import CodeGrader
+from bioagenteval.models import (
     GraderConfig, GradeResult, Task, Transcript, TranscriptEvent,
 )
 

@@ -2,9 +2,9 @@ import json
 import pytest
 from unittest.mock import MagicMock, patch
 
-from pankeval.graders.base import BaseGrader
-from pankeval.graders.model_grader import ModelGrader
-from pankeval.models import GradeResult, GraderConfig, Task, Transcript
+from bioagenteval.graders.base import BaseGrader
+from bioagenteval.graders.model_grader import ModelGrader
+from bioagenteval.models import GradeResult, GraderConfig, Task, Transcript
 
 
 def _mock_anthropic_response(score: float, passed: bool, reasoning: str):
@@ -22,7 +22,7 @@ def _mock_anthropic_response(score: float, passed: bool, reasoning: str):
 
 class TestModelGraderIsBaseGrader:
     def test_inherits_base(self):
-        with patch("pankeval.graders.model_grader.anthropic"):
+        with patch("bioagenteval.graders.model_grader.anthropic"):
             grader = ModelGrader()
         assert isinstance(grader, BaseGrader)
 
@@ -43,7 +43,7 @@ class TestModelGraderGrade:
         self.transcript = Transcript(task_id="t1")
         self.config = self.task.graders[0]
 
-    @patch("pankeval.graders.model_grader.anthropic")
+    @patch("bioagenteval.graders.model_grader.anthropic")
     def test_passing_grade(self, mock_anthropic_mod):
         mock_client = MagicMock()
         mock_anthropic_mod.Anthropic.return_value = mock_client
@@ -59,7 +59,7 @@ class TestModelGraderGrade:
         assert result.grader_type == "model"
         assert "reasoning" in result.details
 
-    @patch("pankeval.graders.model_grader.anthropic")
+    @patch("bioagenteval.graders.model_grader.anthropic")
     def test_failing_grade(self, mock_anthropic_mod):
         mock_client = MagicMock()
         mock_anthropic_mod.Anthropic.return_value = mock_client
@@ -73,7 +73,7 @@ class TestModelGraderGrade:
         assert result.passed is False
         assert result.score == 0.2
 
-    @patch("pankeval.graders.model_grader.anthropic")
+    @patch("bioagenteval.graders.model_grader.anthropic")
     def test_api_error_returns_zero(self, mock_anthropic_mod):
         mock_client = MagicMock()
         mock_anthropic_mod.Anthropic.return_value = mock_client
@@ -86,7 +86,7 @@ class TestModelGraderGrade:
         assert result.score == 0.0
         assert "error" in result.details
 
-    @patch("pankeval.graders.model_grader.anthropic")
+    @patch("bioagenteval.graders.model_grader.anthropic")
     def test_custom_model(self, mock_anthropic_mod):
         mock_client = MagicMock()
         mock_anthropic_mod.Anthropic.return_value = mock_client

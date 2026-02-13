@@ -1,1 +1,0 @@
-"""PanKgraph Agent Evaluation Harness."""

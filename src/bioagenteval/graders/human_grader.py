@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import logging
 
-from pankeval.graders.base import BaseGrader
-from pankeval.models import GradeResult, GraderConfig, Task, Transcript
+from bioagenteval.graders.base import BaseGrader
+from bioagenteval.models import GradeResult, GraderConfig, Task, Transcript
 
 logger = logging.getLogger(__name__)
 

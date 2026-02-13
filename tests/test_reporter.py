@@ -2,10 +2,10 @@ import json
 import pytest
 from pathlib import Path
 
-from pankeval.models import (
+from bioagenteval.models import (
     EvalResult, GradeResult, Transcript, TrialResult,
 )
-from pankeval.reporter import EvalReporter
+from bioagenteval.reporter import EvalReporter
 
 
 def _make_result(task_id: str, scores: list[float]) -> EvalResult:

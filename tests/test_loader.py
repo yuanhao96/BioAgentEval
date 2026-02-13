@@ -1,8 +1,8 @@
 import pytest
 from pathlib import Path
 
-from pankeval.loader import load_suite
-from pankeval.models import EvalSuite, Task
+from bioagenteval.loader import load_suite
+from bioagenteval.models import EvalSuite, Task
 
 
 MINIMAL_YAML = """\

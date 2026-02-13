@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 import openai
 
-from pankeval.models import AgentResponse, Transcript, TranscriptEvent
+from bioagenteval.models import AgentResponse, Transcript, TranscriptEvent
 
 SYSTEM_PROMPT = """\
 You are a biomedical knowledge assistant. Answer questions about genes,

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from pankeval.models import AgentResponse
+from bioagenteval.models import AgentResponse
 
 
 @runtime_checkable

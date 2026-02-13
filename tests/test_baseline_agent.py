@@ -1,9 +1,9 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from pankeval.agents.baseline_qa import BaselineQAAgent
-from pankeval.harness import AgentHarness
-from pankeval.models import AgentResponse, Transcript
+from bioagenteval.agents.baseline_qa import BaselineQAAgent
+from bioagenteval.harness import AgentHarness
+from bioagenteval.models import AgentResponse, Transcript
 
 
 def _mock_openai_response(content: str):
@@ -17,12 +17,12 @@ def _mock_openai_response(content: str):
 
 
 class TestBaselineQAAgent:
-    @patch("pankeval.agents.baseline_qa.openai")
+    @patch("bioagenteval.agents.baseline_qa.openai")
     def test_satisfies_harness_protocol(self, mock_openai_mod):
         agent = BaselineQAAgent()
         assert isinstance(agent, AgentHarness)
 
-    @patch("pankeval.agents.baseline_qa.openai")
+    @patch("bioagenteval.agents.baseline_qa.openai")
     def test_run_returns_agent_response(self, mock_openai_mod):
         mock_client = MagicMock()
         mock_openai_mod.OpenAI.return_value = mock_client
@@ -35,7 +35,7 @@ class TestBaselineQAAgent:
         assert resp.outcome == "INS gene encodes insulin."
         assert resp.transcript.task_id == "baseline"
 
-    @patch("pankeval.agents.baseline_qa.openai")
+    @patch("bioagenteval.agents.baseline_qa.openai")
     def test_transcript_captures_events(self, mock_openai_mod):
         mock_client = MagicMock()
         mock_openai_mod.OpenAI.return_value = mock_client
@@ -49,12 +49,12 @@ class TestBaselineQAAgent:
         assert events[0].event_type == "llm_call"
         assert "question" in events[0].data
 
-    @patch("pankeval.agents.baseline_qa.openai")
+    @patch("bioagenteval.agents.baseline_qa.openai")
     def test_reset_clears_state(self, mock_openai_mod):
         agent = BaselineQAAgent()
         agent.reset()  # Should not raise
 
-    @patch("pankeval.agents.baseline_qa.openai")
+    @patch("bioagenteval.agents.baseline_qa.openai")
     def test_custom_model(self, mock_openai_mod):
         mock_client = MagicMock()
         mock_openai_mod.OpenAI.return_value = mock_client

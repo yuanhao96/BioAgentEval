@@ -6,7 +6,7 @@ from typing import Any
 
 import yaml
 
-from pankeval.models import EvalSuite, GraderConfig, Task
+from bioagenteval.models import EvalSuite, GraderConfig, Task
 
 
 def load_suite(path: str | Path) -> tuple[EvalSuite, list[Task]]:

@@ -5,8 +5,8 @@ import logging
 import time
 from typing import Any
 
-from pankeval.harness import AgentHarness
-from pankeval.models import EvalResult, Task, Transcript, TrialResult
+from bioagenteval.harness import AgentHarness
+from bioagenteval.models import EvalResult, Task, Transcript, TrialResult
 
 logger = logging.getLogger(__name__)
 

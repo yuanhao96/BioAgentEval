@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from pankeval.models import GradeResult, GraderConfig, Task, Transcript
+from bioagenteval.models import GradeResult, GraderConfig, Task, Transcript
 
 
 class BaseGrader(ABC):
