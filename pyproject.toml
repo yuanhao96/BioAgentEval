@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pankeval"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = [
+    "pydantic>=2.0",
+    "PyYAML>=6.0",
+    "click>=8.0",
+    "anthropic>=0.66.0",
+    "openai>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-mock>=3.10"]
+
+[project.scripts]
+pankeval = "pankeval.__main__:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
