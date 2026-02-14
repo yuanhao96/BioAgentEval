@@ -2,10 +2,16 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 
+from dotenv import load_dotenv
 import openai
 
 from bioagenteval.models import AgentResponse, Transcript, TranscriptEvent
+
+# Load .env from project root (parent of src/)
+_env_path = Path(__file__).resolve().parents[3] / ".env"
+load_dotenv(_env_path)
 
 SYSTEM_PROMPT = """\
 You are a biomedical knowledge assistant. Answer questions about genes,

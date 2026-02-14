@@ -1,0 +1,80 @@
+{
+  "builder_name": "parquet",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "hle-gold-bio-chem",
+  "dataset_size": 5211020,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/futurehouse/hle-gold-bio-chem@1feb9e1d545731dba81e594438330406830e5260/data/train-00000-of-00001.parquet": {
+      "num_bytes": 4982881,
+      "checksum": null
+    }
+  },
+  "download_size": 4982881,
+  "features": {
+    "id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "question": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "image": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "image_preview": {
+      "_type": "Image"
+    },
+    "answer": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "answer_type": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "author_name": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "rationale": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "rationale_image": {
+      "_type": "Image"
+    },
+    "raw_subject": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "category": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "canary": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 10193901,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 5211020,
+      "num_examples": 149,
+      "dataset_name": "hle-gold-bio-chem"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}

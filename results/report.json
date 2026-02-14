@@ -1,0 +1,396 @@
+{
+  "suite_name": "biomedical_core",
+  "run_id": "bd494647-07e5-4a62-b64b-9708f05ff001",
+  "timestamp": "2026-02-14T00:24:06.457058+00:00",
+  "results": [
+    {
+      "task_id": "gene_diabetes_association",
+      "pass_at_1": 1.0,
+      "mean_scores": {
+        "code": 0.6666666666666666
+      },
+      "num_trials": 3,
+      "trials": [
+        {
+          "trial_num": 0,
+          "outcome": "Type 1 diabetes (T1D) is a complex autoimmune disease with a strong genetic component. Several genes have been associated with an increased risk of developing T1D. Key genes include:\n\n1. **HLA Genes**: The human leukocyte antigen (HLA) region is the most significant genetic risk factor. Specific alleles, such as HLA-DR3 (DRB1*0301) and HLA-DR4 (DRB1*0401), substantially increase the risk.\n\n2. **INS Gene**: Variations in the insulin (INS) gene, particularly the variable number of tandem repeats (VNTR) in its promoter region, have been linked to T1D risk.\n\n3. **PTPN22**: The protein tyrosine phosphatase non-receptor type 22 (PTPN22) gene is involved in immune regulation, and its R620W variant has been associated with T1D.\n\n4. **IL2RA**: The interleukin 2 receptor alpha (IL2RA) gene is involved in T-cell regulation, and polymorphisms in this gene are associated with T1D.\n\n5. **CTLA4**: Variants in the cytotoxic T-lymphocyte-associated protein 4 (CTLA4) gene can influence susceptibility to T1D.\n\n6. **IFIH1**: The interferon induced with helicase C domain 1 (IFIH1) gene is involved in antiviral responses, and certain variants are linked to T1D.\n\nThese genes, among others, contribute to the genetic predisposition to T1D, often in combination with environmental factors. The genetic basis of T1D involves multiple loci, reflecting its polygenic nature.",
+          "grades": [
+            {
+              "grader_type": "code",
+              "score": 0.5,
+              "passed": true,
+              "details": {
+                "entity_presence": 0.5
+              }
+            }
+          ],
+          "transcript": {
+            "task_id": "baseline",
+            "events": [
+              {
+                "event_type": "llm_call",
+                "event_name": "chat_completion",
+                "data": {
+                  "question": "What genes are associated with type 1 diabetes?",
+                  "model": "gpt-4o",
+                  "prompt_tokens": 78,
+                  "completion_tokens": 355
+                },
+                "timestamp": "2026-02-14T00:23:18.949027Z"
+              },
+              {
+                "event_type": "llm_response",
+                "event_name": "chat_completion_result",
+                "data": {
+                  "answer": "Type 1 diabetes (T1D) is a complex autoimmune disease with a strong genetic component. Several genes have been associated with an increased risk of developing T1D. Key genes include:\n\n1. **HLA Genes**: The human leukocyte antigen (HLA) region is the most significant genetic risk factor. Specific alleles, such as HLA-DR3 (DRB1*0301) and HLA-DR4 (DRB1*0401), substantially increase the risk.\n\n2. **INS Gene**: Variations in the insulin (INS) gene, particularly the variable number of tandem repeats (VNTR) in its promoter region, have been linked to T1D risk.\n\n3. **PTPN22**: The protein tyrosine phosphatase non-receptor type 22 (PTPN22) gene is involved in immune regulation, and its R620W variant has been associated with T1D.\n\n4. **IL2RA**: The interleukin 2 receptor alpha (IL2RA) gene is involved in T-cell regulation, and polymorphisms in this gene are associated with T1D.\n\n5. **CTLA4**: Variants in the cytotoxic T-lymphocyte-associated protein 4 (CTLA4) gene can influence susceptibility to T1D.\n\n6. **IFIH1**: The interferon induced with helicase C domain 1 (IFIH1) gene is involved in antiviral responses, and certain variants are linked to T1D.\n\nThese genes, among others, contribute to the genetic predisposition to T1D, often in combination with environmental factors. The genetic basis of T1D involves multiple loci, reflecting its polygenic nature."
+                },
+                "timestamp": "2026-02-14T00:23:25.409277Z"
+              }
+            ],
+            "cypher_queries": [],
+            "neo4j_results": [],
+            "started_at": "2026-02-14T00:23:18.949027Z",
+            "finished_at": "2026-02-14T00:23:25.409277Z"
+          },
+          "duration_ms": 6460.299074649811,
+          "error": null
+        },
+        {
+          "trial_num": 1,
+          "outcome": "Type 1 diabetes is an autoimmune disease where the body's immune system attacks and destroys the insulin-producing beta cells in the pancreas. Several genes have been associated with an increased risk of developing type 1 diabetes. The most significant genetic associations are with the Human Leukocyte Antigen (HLA) region on chromosome 6, particularly:\n\n1. **HLA-DR3** and **HLA-DR4** haplotypes, with specific alleles HLA-DRB1*03:01 and HLA-DRB1*04:01 being the most strongly associated.\n2. **HLA-DQ** alleles, particularly HLA-DQB1*02:01 and HLA-DQB1*03:02, are also implicated.\n\nBeyond the HLA region, other non-HLA genes have been identified:\n\n- **INS** (Insulin gene), with specific polymorphisms influencing risk.\n- **PTPN22** (Protein Tyrosine Phosphatase, Non-Receptor Type 22), known to be involved in immune system regulation (e.g., rs2476601 polymorphism).\n- **CTLA4** (Cytotoxic T-Lymphocyte Associated protein 4), which is involved in the downregulation of immune responses.\n- **IL2RA** (Interleukin 2 Receptor Subunit Alpha), associated with immune system processes.\n- **IFIH1** (Interferon Induced with Helicase C Domain 1), which plays a role in viral defense mechanisms.\n\nThese genes are part of pathways involved in immune tolerance and regulation, and their variations can increase susceptibility to type 1 diabetes by affecting immune function.",
+          "grades": [
+            {
+              "grader_type": "code",
+              "score": 1.0,
+              "passed": true,
+              "details": {
+                "entity_presence": 1.0
+              }
+            }
+          ],
+          "transcript": {
+            "task_id": "baseline",
+            "events": [
+              {
+                "event_type": "llm_call",
+                "event_name": "chat_completion",
+                "data": {
+                  "question": "What genes are associated with type 1 diabetes?",
+                  "model": "gpt-4o",
+                  "prompt_tokens": 78,
+                  "completion_tokens": 341
+                },
+                "timestamp": "2026-02-14T00:23:25.409467Z"
+              },
+              {
+                "event_type": "llm_response",
+                "event_name": "chat_completion_result",
+                "data": {
+                  "answer": "Type 1 diabetes is an autoimmune disease where the body's immune system attacks and destroys the insulin-producing beta cells in the pancreas. Several genes have been associated with an increased risk of developing type 1 diabetes. The most significant genetic associations are with the Human Leukocyte Antigen (HLA) region on chromosome 6, particularly:\n\n1. **HLA-DR3** and **HLA-DR4** haplotypes, with specific alleles HLA-DRB1*03:01 and HLA-DRB1*04:01 being the most strongly associated.\n2. **HLA-DQ** alleles, particularly HLA-DQB1*02:01 and HLA-DQB1*03:02, are also implicated.\n\nBeyond the HLA region, other non-HLA genes have been identified:\n\n- **INS** (Insulin gene), with specific polymorphisms influencing risk.\n- **PTPN22** (Protein Tyrosine Phosphatase, Non-Receptor Type 22), known to be involved in immune system regulation (e.g., rs2476601 polymorphism).\n- **CTLA4** (Cytotoxic T-Lymphocyte Associated protein 4), which is involved in the downregulation of immune responses.\n- **IL2RA** (Interleukin 2 Receptor Subunit Alpha), associated with immune system processes.\n- **IFIH1** (Interferon Induced with Helicase C Domain 1), which plays a role in viral defense mechanisms.\n\nThese genes are part of pathways involved in immune tolerance and regulation, and their variations can increase susceptibility to type 1 diabetes by affecting immune function."
+                },
+                "timestamp": "2026-02-14T00:23:30.807374Z"
+              }
+            ],
+            "cypher_queries": [],
+            "neo4j_results": [],
+            "started_at": "2026-02-14T00:23:25.409467Z",
+            "finished_at": "2026-02-14T00:23:30.807374Z"
+          },
+          "duration_ms": 5397.947579622269,
+          "error": null
+        },
+        {
+          "trial_num": 2,
+          "outcome": "Type 1 diabetes (T1D) is a complex autoimmune disease with a strong genetic component. Several genes are associated with increased susceptibility to T1D, primarily related to immune response. Some of the key genes include:\n\n1. **HLA genes**: The human leukocyte antigen (HLA) region on chromosome 6p21 is the most significant genetic factor in T1D susceptibility. Specific alleles, particularly in the HLA-DR and HLA-DQ loci, are strongly associated with the disease. For example, the HLA-DR3-DQ2 (DQA1*0501-DQB1*0201) and HLA-DR4-DQ8 (DQA1*0301-DQB1*0302) haplotypes are linked to an increased risk of T1D.\n\n2. **INS gene (insulin gene)**: Polymorphisms in the INS gene, particularly in the variable number of tandem repeats (VNTR) region upstream of the gene, are associated with T1D. The ENSG00000254647 is the ENSEMBL ID for the INS gene.\n\n3. **PTPN22**: This gene (protein tyrosine phosphatase non-receptor type 22) encodes a protein involved in the regulation of immune responses. The R620W polymorphism in the PTPN22 gene is a known risk factor for T1D and other autoimmune diseases. Its ENSEMBL ID is ENSG00000134242.\n\n4. **CTLA4**: The cytotoxic T-lymphocyte-associated protein 4 gene (CTLA4) is involved in immune regulation. Variants in this gene are associated with T1D susceptibility. The ENSEMBL ID is ENSG00000163599.\n\n5. **IL2RA**: The interleukin-2 receptor alpha gene (also known as CD25) influences T-cell proliferation and immune tolerance. Variants in IL2RA are linked to T1D risk, with the ENSEMBL ID ENSG00000134460.\n\nThese genes are part of a broader list of loci that contribute to the genetic architecture of T1D. It's important to note that the combination of genetic susceptibility and environmental factors ultimately contributes to the development of T1D.",
+          "grades": [
+            {
+              "grader_type": "code",
+              "score": 0.5,
+              "passed": true,
+              "details": {
+                "entity_presence": 0.5
+              }
+            }
+          ],
+          "transcript": {
+            "task_id": "baseline",
+            "events": [
+              {
+                "event_type": "llm_call",
+                "event_name": "chat_completion",
+                "data": {
+                  "question": "What genes are associated with type 1 diabetes?",
+                  "model": "gpt-4o",
+                  "prompt_tokens": 78,
+                  "completion_tokens": 470
+                },
+                "timestamp": "2026-02-14T00:23:30.807547Z"
+              },
+              {
+                "event_type": "llm_response",
+                "event_name": "chat_completion_result",
+                "data": {
+                  "answer": "Type 1 diabetes (T1D) is a complex autoimmune disease with a strong genetic component. Several genes are associated with increased susceptibility to T1D, primarily related to immune response. Some of the key genes include:\n\n1. **HLA genes**: The human leukocyte antigen (HLA) region on chromosome 6p21 is the most significant genetic factor in T1D susceptibility. Specific alleles, particularly in the HLA-DR and HLA-DQ loci, are strongly associated with the disease. For example, the HLA-DR3-DQ2 (DQA1*0501-DQB1*0201) and HLA-DR4-DQ8 (DQA1*0301-DQB1*0302) haplotypes are linked to an increased risk of T1D.\n\n2. **INS gene (insulin gene)**: Polymorphisms in the INS gene, particularly in the variable number of tandem repeats (VNTR) region upstream of the gene, are associated with T1D. The ENSG00000254647 is the ENSEMBL ID for the INS gene.\n\n3. **PTPN22**: This gene (protein tyrosine phosphatase non-receptor type 22) encodes a protein involved in the regulation of immune responses. The R620W polymorphism in the PTPN22 gene is a known risk factor for T1D and other autoimmune diseases. Its ENSEMBL ID is ENSG00000134242.\n\n4. **CTLA4**: The cytotoxic T-lymphocyte-associated protein 4 gene (CTLA4) is involved in immune regulation. Variants in this gene are associated with T1D susceptibility. The ENSEMBL ID is ENSG00000163599.\n\n5. **IL2RA**: The interleukin-2 receptor alpha gene (also known as CD25) influences T-cell proliferation and immune tolerance. Variants in IL2RA are linked to T1D risk, with the ENSEMBL ID ENSG00000134460.\n\nThese genes are part of a broader list of loci that contribute to the genetic architecture of T1D. It's important to note that the combination of genetic susceptibility and environmental factors ultimately contributes to the development of T1D."
+                },
+                "timestamp": "2026-02-14T00:23:38.229409Z"
+              }
+            ],
+            "cypher_queries": [],
+            "neo4j_results": [],
+            "started_at": "2026-02-14T00:23:30.807547Z",
+            "finished_at": "2026-02-14T00:23:38.229409Z"
+          },
+          "duration_ms": 7421.896576881409,
+          "error": null
+        }
+      ]
+    },
+    {
+      "task_id": "gene_overview_ins",
+      "pass_at_1": 1.0,
+      "mean_scores": {
+        "code": 0.8333333333333333
+      },
+      "num_trials": 2,
+      "trials": [
+        {
+          "trial_num": 0,
+          "outcome": "The INS gene encodes insulin, a peptide hormone critical for regulating glucose metabolism, produced primarily in the pancreatic beta cells. Insulin facilitates cellular glucose uptake, promotes glycogen synthesis, and inhibits gluconeogenesis.\n\nMutations in the INS gene can cause several diseases, primarily involving glucose metabolism dysregulation:\n\n1. **Diabetes Mellitus**:\n   - **Type 1 Diabetes**: An autoimmune condition where the immune system attacks insulin-producing beta cells. While the direct role of INS mutations in Type 1 Diabetes is less clear, mutations might influence beta cell function and survival.\n   - **Type 2 Diabetes**: Although primarily associated with insulin resistance and environmental factors, some genetic variations in the INS locus can contribute to disease susceptibility.\n   - **Maturity-Onset Diabetes of the Young (MODY)**: A subset of cases, known as MODY10, are due to mutations in the INS gene, leading to improper insulin signaling or secretion.\n\n2. **Neonatal Diabetes**: Mutations in the INS gene can also lead to neonatal diabetes mellitus, a rare form of diabetes appearing in the first six months of life. It can be transient or permanent and results from either impaired insulin secretion or beta cell dysfunction.\n\n3. **Hyperproinsulinemia**: This condition occurs when there's a defect in the conversion of proinsulin to insulin, often due to mutations in the INS gene, leading to an excess of proinsulin in the bloodstream.\n\nThe INS gene is located on chromosome 11p15.5. Specific gene identifiers include ENSEMBL ID ENSG00000254647. Understanding mutations and variations within this gene contributes to the broader management and therapeutic strategies for diabetes and related metabolic disorders.",
+          "grades": [
+            {
+              "grader_type": "code",
+              "score": 1.0,
+              "passed": true,
+              "details": {
+                "entity_presence": 1.0
+              }
+            }
+          ],
+          "transcript": {
+            "task_id": "baseline",
+            "events": [
+              {
+                "event_type": "llm_call",
+                "event_name": "chat_completion",
+                "data": {
+                  "question": "Tell me about the INS gene and its role in disease.",
+                  "model": "gpt-4o",
+                  "prompt_tokens": 80,
+                  "completion_tokens": 348
+                },
+                "timestamp": "2026-02-14T00:23:38.229573Z"
+              },
+              {
+                "event_type": "llm_response",
+                "event_name": "chat_completion_result",
+                "data": {
+                  "answer": "The INS gene encodes insulin, a peptide hormone critical for regulating glucose metabolism, produced primarily in the pancreatic beta cells. Insulin facilitates cellular glucose uptake, promotes glycogen synthesis, and inhibits gluconeogenesis.\n\nMutations in the INS gene can cause several diseases, primarily involving glucose metabolism dysregulation:\n\n1. **Diabetes Mellitus**:\n   - **Type 1 Diabetes**: An autoimmune condition where the immune system attacks insulin-producing beta cells. While the direct role of INS mutations in Type 1 Diabetes is less clear, mutations might influence beta cell function and survival.\n   - **Type 2 Diabetes**: Although primarily associated with insulin resistance and environmental factors, some genetic variations in the INS locus can contribute to disease susceptibility.\n   - **Maturity-Onset Diabetes of the Young (MODY)**: A subset of cases, known as MODY10, are due to mutations in the INS gene, leading to improper insulin signaling or secretion.\n\n2. **Neonatal Diabetes**: Mutations in the INS gene can also lead to neonatal diabetes mellitus, a rare form of diabetes appearing in the first six months of life. It can be transient or permanent and results from either impaired insulin secretion or beta cell dysfunction.\n\n3. **Hyperproinsulinemia**: This condition occurs when there's a defect in the conversion of proinsulin to insulin, often due to mutations in the INS gene, leading to an excess of proinsulin in the bloodstream.\n\nThe INS gene is located on chromosome 11p15.5. Specific gene identifiers include ENSEMBL ID ENSG00000254647. Understanding mutations and variations within this gene contributes to the broader management and therapeutic strategies for diabetes and related metabolic disorders."
+                },
+                "timestamp": "2026-02-14T00:23:44.138779Z"
+              }
+            ],
+            "cypher_queries": [],
+            "neo4j_results": [],
+            "started_at": "2026-02-14T00:23:38.229573Z",
+            "finished_at": "2026-02-14T00:23:44.138779Z"
+          },
+          "duration_ms": 5909.242391586304,
+          "error": null
+        },
+        {
+          "trial_num": 1,
+          "outcome": "The INS gene encodes the insulin protein, which plays a vital role in glucose metabolism. Insulin is a hormone produced by the beta cells of the pancreas and is crucial for regulating blood sugar levels. Mutations or dysregulation of the INS gene are associated with various diseases, particularly diabetes mellitus.\n\n1. **Type 1 Diabetes Mellitus (T1DM):** This is an autoimmune condition where the body's immune system attacks and destroys beta cells in the pancreas, leading to insufficient insulin production. Though T1DM is primarily associated with immune-mediated destruction, certain rare mutations in the INS gene can also contribute to this condition.\n\n2. **Type 2 Diabetes Mellitus (T2DM):** While T2DM is predominantly linked to insulin resistance, genetic factors, including variations in the INS gene, can influence individual susceptibility. However, the involvement of INS in T2DM is generally indirect compared to T1DM.\n\n3. **Maturity-Onset Diabetes of the Young (MODY):** Mutations in the INS gene have been known to cause a rare form of MODY, specifically MODY10. This monogenic form of diabetes is characterized by autosomal dominant inheritance and usually presents at a young age with primarily beta-cell dysfunction.\n\n4. **Hyperinsulinism:** Certain mutations in the INS gene can lead to congenital hyperinsulinism, where excessive insulin is secreted, causing hypoglycemia. This can be life-threatening if not managed appropriately.\n\nThe INS gene is located on chromosome 11 (11p15.5), and its dysfunction can have profound effects on metabolic homeostasis. Understanding the genetic basis of its associated disorders aids in the development of targeted therapies and personalized medicine approaches.",
+          "grades": [
+            {
+              "grader_type": "code",
+              "score": 0.6666666666666666,
+              "passed": true,
+              "details": {
+                "entity_presence": 0.6666666666666666
+              }
+            }
+          ],
+          "transcript": {
+            "task_id": "baseline",
+            "events": [
+              {
+                "event_type": "llm_call",
+                "event_name": "chat_completion",
+                "data": {
+                  "question": "Tell me about the INS gene and its role in disease.",
+                  "model": "gpt-4o",
+                  "prompt_tokens": 80,
+                  "completion_tokens": 344
+                },
+                "timestamp": "2026-02-14T00:23:44.138853Z"
+              },
+              {
+                "event_type": "llm_response",
+                "event_name": "chat_completion_result",
+                "data": {
+                  "answer": "The INS gene encodes the insulin protein, which plays a vital role in glucose metabolism. Insulin is a hormone produced by the beta cells of the pancreas and is crucial for regulating blood sugar levels. Mutations or dysregulation of the INS gene are associated with various diseases, particularly diabetes mellitus.\n\n1. **Type 1 Diabetes Mellitus (T1DM):** This is an autoimmune condition where the body's immune system attacks and destroys beta cells in the pancreas, leading to insufficient insulin production. Though T1DM is primarily associated with immune-mediated destruction, certain rare mutations in the INS gene can also contribute to this condition.\n\n2. **Type 2 Diabetes Mellitus (T2DM):** While T2DM is predominantly linked to insulin resistance, genetic factors, including variations in the INS gene, can influence individual susceptibility. However, the involvement of INS in T2DM is generally indirect compared to T1DM.\n\n3. **Maturity-Onset Diabetes of the Young (MODY):** Mutations in the INS gene have been known to cause a rare form of MODY, specifically MODY10. This monogenic form of diabetes is characterized by autosomal dominant inheritance and usually presents at a young age with primarily beta-cell dysfunction.\n\n4. **Hyperinsulinism:** Certain mutations in the INS gene can lead to congenital hyperinsulinism, where excessive insulin is secreted, causing hypoglycemia. This can be life-threatening if not managed appropriately.\n\nThe INS gene is located on chromosome 11 (11p15.5), and its dysfunction can have profound effects on metabolic homeostasis. Understanding the genetic basis of its associated disorders aids in the development of targeted therapies and personalized medicine approaches."
+                },
+                "timestamp": "2026-02-14T00:23:48.950910Z"
+              }
+            ],
+            "cypher_queries": [],
+            "neo4j_results": [],
+            "started_at": "2026-02-14T00:23:44.138853Z",
+            "finished_at": "2026-02-14T00:23:48.950910Z"
+          },
+          "duration_ms": 4812.091156840324,
+          "error": null
+        }
+      ]
+    },
+    {
+      "task_id": "pathway_insulin_signaling",
+      "pass_at_1": 1.0,
+      "mean_scores": {
+        "code": 0.5
+      },
+      "num_trials": 3,
+      "trials": [
+        {
+          "trial_num": 0,
+          "outcome": "The insulin signaling pathway is a crucial metabolic pathway that involves several key genes. Some of the primary genes involved include:\n\n1. **INSR (Insulin Receptor)**: This gene encodes the insulin receptor, which is the initial point of insulin binding and activation of the signaling cascade.\n\n2. **IRS1 and IRS2 (Insulin Receptor Substrate 1 and 2)**: These proteins are phosphorylated by the insulin receptor and play a role in propagating the signal downstream.\n\n3. **PIK3CA/PIK3CB/PIK3CD (Phosphoinositide-3-Kinase Catalytic Subunits Alpha, Beta, and Delta)**: These are part of the PI3K complex, activated by IRS proteins, and essential for further signaling.\n\n4. **AKT1, AKT2, AKT3 (AKT Serine/Threonine Kinase 1, 2, and 3)**: Also known as protein kinase B, these proteins are important downstream targets in the pathway, involved in various cellular processes including glucose uptake.\n\n5. **MTOR (Mechanistic Target of Rapamycin)**: This gene plays a major role in controlling cell growth, proliferation, and survival as a downstream component of the pathway.\n\n6. **MAPK1 and MAPK3 (Mitogen-Activated Protein Kinase 1 and 3)**: Part of the MAPK pathway that is activated by insulin for mediating cellular responses.\n\n7. **FOXO1 (Forkhead Box O1)**: A transcription factor that is negatively regulated by the insulin pathway, affecting glucose metabolism.\n\nThese are some of the critical players in the insulin signaling pathway, and they work together to regulate various metabolic processes in response to insulin.",
+          "grades": [
+            {
+              "grader_type": "code",
+              "score": 0.5,
+              "passed": true,
+              "details": {
+                "entity_presence": 1.0,
+                "cypher_pattern": 0.0
+              }
+            }
+          ],
+          "transcript": {
+            "task_id": "baseline",
+            "events": [
+              {
+                "event_type": "llm_call",
+                "event_name": "chat_completion",
+                "data": {
+                  "question": "What are the key genes in the insulin signaling pathway?",
+                  "model": "gpt-4o",
+                  "prompt_tokens": 79,
+                  "completion_tokens": 360
+                },
+                "timestamp": "2026-02-14T00:23:48.951063Z"
+              },
+              {
+                "event_type": "llm_response",
+                "event_name": "chat_completion_result",
+                "data": {
+                  "answer": "The insulin signaling pathway is a crucial metabolic pathway that involves several key genes. Some of the primary genes involved include:\n\n1. **INSR (Insulin Receptor)**: This gene encodes the insulin receptor, which is the initial point of insulin binding and activation of the signaling cascade.\n\n2. **IRS1 and IRS2 (Insulin Receptor Substrate 1 and 2)**: These proteins are phosphorylated by the insulin receptor and play a role in propagating the signal downstream.\n\n3. **PIK3CA/PIK3CB/PIK3CD (Phosphoinositide-3-Kinase Catalytic Subunits Alpha, Beta, and Delta)**: These are part of the PI3K complex, activated by IRS proteins, and essential for further signaling.\n\n4. **AKT1, AKT2, AKT3 (AKT Serine/Threonine Kinase 1, 2, and 3)**: Also known as protein kinase B, these proteins are important downstream targets in the pathway, involved in various cellular processes including glucose uptake.\n\n5. **MTOR (Mechanistic Target of Rapamycin)**: This gene plays a major role in controlling cell growth, proliferation, and survival as a downstream component of the pathway.\n\n6. **MAPK1 and MAPK3 (Mitogen-Activated Protein Kinase 1 and 3)**: Part of the MAPK pathway that is activated by insulin for mediating cellular responses.\n\n7. **FOXO1 (Forkhead Box O1)**: A transcription factor that is negatively regulated by the insulin pathway, affecting glucose metabolism.\n\nThese are some of the critical players in the insulin signaling pathway, and they work together to regulate various metabolic processes in response to insulin."
+                },
+                "timestamp": "2026-02-14T00:23:54.903455Z"
+              }
+            ],
+            "cypher_queries": [],
+            "neo4j_results": [],
+            "started_at": "2026-02-14T00:23:48.951063Z",
+            "finished_at": "2026-02-14T00:23:54.903455Z"
+          },
+          "duration_ms": 5952.428996562958,
+          "error": null
+        },
+        {
+          "trial_num": 1,
+          "outcome": "The insulin signaling pathway is a critical regulator of glucose homeostasis and involves several key genes. Some of the primary genes and their corresponding proteins involved in this pathway include:\n\n1. **INS (Insulin)**: The hormone itself, which binds to the insulin receptor.\n2. **INSR (Insulin Receptor)**: Encoded by the INSR gene, this receptor initiates the pathway upon insulin binding.\n3. **IRS1/2 (Insulin Receptor Substrates 1 and 2)**: These proteins are phosphorylated by activated insulin receptor and function as adaptor molecules.\n4. **PIK3CA/PIK3CB/PIK3CD/PIK3R1**: These encode subunits of phosphoinositide 3-kinases (PI3K), which are activated downstream of IRS proteins.\n5. **AKT1/2/3 (Protein Kinase B)**: Encoded by the AKT1, AKT2, and AKT3 genes, these serine/threonine kinases play a central role in the pathway, affecting glucose uptake and glycogen synthesis.\n6. **mTOR (Mechanistic Target of Rapamycin)**: This kinase integrates signals from insulin and nutrients to regulate cell growth and metabolism.\n7. **GSK3A/GSK3B (Glycogen Synthase Kinase 3 Alpha/Beta)**: These are involved in the regulation of glycogen synthesis, downstream of AKT.\n8. **SLC2A4 (Glucose Transporter Type 4, GLUT4)**: This gene encodes a glucose transporter responsible for glucose uptake in response to insulin signaling.\n\nTogether, these genes and their protein products coordinate a range of cellular responses to insulin, influencing metabolism, growth, and energy storage.",
+          "grades": [
+            {
+              "grader_type": "code",
+              "score": 0.5,
+              "passed": true,
+              "details": {
+                "entity_presence": 1.0,
+                "cypher_pattern": 0.0
+              }
+            }
+          ],
+          "transcript": {
+            "task_id": "baseline",
+            "events": [
+              {
+                "event_type": "llm_call",
+                "event_name": "chat_completion",
+                "data": {
+                  "question": "What are the key genes in the insulin signaling pathway?",
+                  "model": "gpt-4o",
+                  "prompt_tokens": 79,
+                  "completion_tokens": 368
+                },
+                "timestamp": "2026-02-14T00:23:54.903736Z"
+              },
+              {
+                "event_type": "llm_response",
+                "event_name": "chat_completion_result",
+                "data": {
+                  "answer": "The insulin signaling pathway is a critical regulator of glucose homeostasis and involves several key genes. Some of the primary genes and their corresponding proteins involved in this pathway include:\n\n1. **INS (Insulin)**: The hormone itself, which binds to the insulin receptor.\n2. **INSR (Insulin Receptor)**: Encoded by the INSR gene, this receptor initiates the pathway upon insulin binding.\n3. **IRS1/2 (Insulin Receptor Substrates 1 and 2)**: These proteins are phosphorylated by activated insulin receptor and function as adaptor molecules.\n4. **PIK3CA/PIK3CB/PIK3CD/PIK3R1**: These encode subunits of phosphoinositide 3-kinases (PI3K), which are activated downstream of IRS proteins.\n5. **AKT1/2/3 (Protein Kinase B)**: Encoded by the AKT1, AKT2, and AKT3 genes, these serine/threonine kinases play a central role in the pathway, affecting glucose uptake and glycogen synthesis.\n6. **mTOR (Mechanistic Target of Rapamycin)**: This kinase integrates signals from insulin and nutrients to regulate cell growth and metabolism.\n7. **GSK3A/GSK3B (Glycogen Synthase Kinase 3 Alpha/Beta)**: These are involved in the regulation of glycogen synthesis, downstream of AKT.\n8. **SLC2A4 (Glucose Transporter Type 4, GLUT4)**: This gene encodes a glucose transporter responsible for glucose uptake in response to insulin signaling.\n\nTogether, these genes and their protein products coordinate a range of cellular responses to insulin, influencing metabolism, growth, and energy storage."
+                },
+                "timestamp": "2026-02-14T00:24:00.727248Z"
+              }
+            ],
+            "cypher_queries": [],
+            "neo4j_results": [],
+            "started_at": "2026-02-14T00:23:54.903736Z",
+            "finished_at": "2026-02-14T00:24:00.727248Z"
+          },
+          "duration_ms": 5823.547422885895,
+          "error": null
+        },
+        {
+          "trial_num": 2,
+          "outcome": "The insulin signaling pathway is a complex network that regulates glucose uptake and metabolism in response to insulin. Key genes involved in this pathway include:\n\n1. **INSR (Insulin Receptor)**: The INSR gene encodes the insulin receptor, which is essential for initiating the signaling cascade when insulin binds to it.\n\n2. **IRS1 and IRS2 (Insulin Receptor Substrate 1 and 2)**: These genes encode adaptor proteins that are phosphorylated by the activated insulin receptor, serving as docking platforms for downstream signaling molecules.\n\n3. **PIK3CA and PIK3CB (Phosphoinositide-3-kinase catalytic subunit alpha and beta)**: These genes encode catalytic subunits of PI3K, a kinase that converts PIP2 to PIP3, an important step in the signaling pathway.\n\n4. **AKT1, AKT2, and AKT3 (Protein Kinase B isoforms)**: These genes encode serine/threonine-specific kinases that are central to mediating the effects of insulin, including glucose uptake.\n\n5. **MTOR (Mechanistic Target of Rapamycin)**: MTOR integrates signals from insulin and other growth factors to control cell growth and metabolism.\n\n6. **FOXO1 (Forkhead Box O1)**: This gene encodes a transcription factor that is regulated by insulin signaling, playing a role in gluconeogenesis and glucose metabolism.\n\nThese genes work together in a finely tuned network to regulate the actions of insulin within the body. Disruptions in this pathway can lead to metabolic disorders such as insulin resistance and type 2 diabetes.",
+          "grades": [
+            {
+              "grader_type": "code",
+              "score": 0.5,
+              "passed": true,
+              "details": {
+                "entity_presence": 1.0,
+                "cypher_pattern": 0.0
+              }
+            }
+          ],
+          "transcript": {
+            "task_id": "baseline",
+            "events": [
+              {
+                "event_type": "llm_call",
+                "event_name": "chat_completion",
+                "data": {
+                  "question": "What are the key genes in the insulin signaling pathway?",
+                  "model": "gpt-4o",
+                  "prompt_tokens": 79,
+                  "completion_tokens": 332
+                },
+                "timestamp": "2026-02-14T00:24:00.727408Z"
+              },
+              {
+                "event_type": "llm_response",
+                "event_name": "chat_completion_result",
+                "data": {
+                  "answer": "The insulin signaling pathway is a complex network that regulates glucose uptake and metabolism in response to insulin. Key genes involved in this pathway include:\n\n1. **INSR (Insulin Receptor)**: The INSR gene encodes the insulin receptor, which is essential for initiating the signaling cascade when insulin binds to it.\n\n2. **IRS1 and IRS2 (Insulin Receptor Substrate 1 and 2)**: These genes encode adaptor proteins that are phosphorylated by the activated insulin receptor, serving as docking platforms for downstream signaling molecules.\n\n3. **PIK3CA and PIK3CB (Phosphoinositide-3-kinase catalytic subunit alpha and beta)**: These genes encode catalytic subunits of PI3K, a kinase that converts PIP2 to PIP3, an important step in the signaling pathway.\n\n4. **AKT1, AKT2, and AKT3 (Protein Kinase B isoforms)**: These genes encode serine/threonine-specific kinases that are central to mediating the effects of insulin, including glucose uptake.\n\n5. **MTOR (Mechanistic Target of Rapamycin)**: MTOR integrates signals from insulin and other growth factors to control cell growth and metabolism.\n\n6. **FOXO1 (Forkhead Box O1)**: This gene encodes a transcription factor that is regulated by insulin signaling, playing a role in gluconeogenesis and glucose metabolism.\n\nThese genes work together in a finely tuned network to regulate the actions of insulin within the body. Disruptions in this pathway can lead to metabolic disorders such as insulin resistance and type 2 diabetes."
+                },
+                "timestamp": "2026-02-14T00:24:06.456658Z"
+              }
+            ],
+            "cypher_queries": [],
+            "neo4j_results": [],
+            "started_at": "2026-02-14T00:24:00.727408Z",
+            "finished_at": "2026-02-14T00:24:06.456658Z"
+          },
+          "duration_ms": 5729.286313056946,
+          "error": null
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_tasks": 3,
+    "overall_pass_at_1": 1.0
+  }
+}
