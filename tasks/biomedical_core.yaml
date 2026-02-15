@@ -1,20 +1,29 @@
 name: biomedical_core
 description: Core biomedical knowledge evaluation tasks
 default_num_trials: 3
+default_tracked_metrics:
+  - type: transcript
+    metrics:
+      - n_turns
+      - n_tool_calls
+  - type: latency
+    metrics:
+      - time_to_last_token
 
 tasks:
   - id: gene_diabetes_association
     question: "What genes are associated with type 1 diabetes?"
-    expected_entities:
-      - INS
-      - HLA-DRB1
-      - HLA-DQB1
-      - PTPN22
-    expected_complexity: complex
+    expected_output:
+      - type: entities
+        value:
+          - INS
+          - HLA-DRB1
+          - HLA-DQB1
+          - PTPN22
+    tags:
+      complexity: complex
     graders:
       - type: code
-        checks:
-          - entity_presence
       - type: model
         rubric: >
           Does the answer correctly identify major genes associated with
@@ -23,32 +32,34 @@ tasks:
 
   - id: gene_overview_ins
     question: "Tell me about the INS gene and its role in disease."
-    expected_entities:
-      - INS
-      - ENSG00000254647
-      - insulin
-    expected_complexity: simple
+    expected_output:
+      - type: entities
+        value:
+          - INS
+          - ENSG00000254647
+          - insulin
+    tags:
+      complexity: simple
     graders:
       - type: code
-        checks:
-          - entity_presence
     num_trials: 2
 
   - id: pathway_insulin_signaling
     question: "What are the key genes in the insulin signaling pathway?"
-    expected_entities:
-      - INSR
-      - IRS1
-      - PIK3CA
-      - AKT1
-    expected_complexity: complex
-    expected_cypher_patterns:
-      - "MATCH.*Pathway.*insulin"
+    expected_output:
+      - type: entities
+        value:
+          - INSR
+          - IRS1
+          - PIK3CA
+          - AKT1
+      - type: cypher_patterns
+        value:
+          - "MATCH.*Pathway.*insulin"
+    tags:
+      complexity: complex
     graders:
       - type: code
-        checks:
-          - entity_presence
-          - cypher_pattern
       - type: model
         rubric: >
           Does the answer describe the insulin signaling pathway accurately,

@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import MagicMock
 
 from bioagenteval.models import (
-    AgentResponse, EvalResult, GradeResult, GraderConfig,
-    Task, Transcript, TranscriptEvent, TrialResult,
+    AgentResponse, EvalResult, ExpectedOutput, GradeResult, GraderConfig,
+    MetricGroup, Task, Transcript, TranscriptEvent, TrialResult,
 )
 from bioagenteval.runner import EvalRunner
 
@@ -33,12 +33,12 @@ class FakeAgent:
 
 
 class FakeGrader:
-    def grade(self, task, outcome, transcript, config):
+    def grade(self, task, outcome, transcript, config, metrics=None):
         return GradeResult(grader_type="code", score=1.0, passed=True)
 
 
 class FailingGrader:
-    def grade(self, task, outcome, transcript, config):
+    def grade(self, task, outcome, transcript, config, metrics=None):
         return GradeResult(grader_type="code", score=0.0, passed=False)
 
 
@@ -47,7 +47,8 @@ class TestEvalRunner:
         task = Task(
             id="t1",
             question="What is INS?",
-            graders=[GraderConfig(type="code", checks=["entity_presence"])],
+            expected_output=[ExpectedOutput(type="entities", value=["INS"])],
+            graders=[GraderConfig(type="code")],
             num_trials=1,
         )
         runner = EvalRunner(
@@ -134,7 +135,7 @@ class TestEvalRunner:
             id="t1",
             question="Q?",
             graders=[
-                GraderConfig(type="code", checks=["entity_presence"]),
+                GraderConfig(type="code"),
                 GraderConfig(type="model", rubric="Is it good?"),
             ],
             num_trials=1,
@@ -148,3 +149,33 @@ class TestEvalRunner:
         )
         result = runner.run_task(task)
         assert len(result.trials[0].grades) == 2
+
+    def test_trial_metrics_populated(self):
+        task = Task(
+            id="t1",
+            question="Q?",
+            graders=[GraderConfig(type="code")],
+            tracked_metrics=[
+                MetricGroup(type="transcript", metrics=["n_turns", "n_tool_calls"]),
+            ],
+            num_trials=1,
+        )
+        runner = EvalRunner(agent=FakeAgent(), graders={"code": FakeGrader()})
+        result = runner.run_task(task)
+        trial = result.trials[0]
+        assert "n_turns" in trial.metrics
+        assert "n_tool_calls" in trial.metrics
+        # FakeAgent produces 1 llm_call event
+        assert trial.metrics["n_turns"] == 1
+        assert trial.metrics["n_tool_calls"] == 0
+
+    def test_empty_tracked_metrics(self):
+        task = Task(
+            id="t1",
+            question="Q?",
+            graders=[GraderConfig(type="code")],
+            num_trials=1,
+        )
+        runner = EvalRunner(agent=FakeAgent(), graders={"code": FakeGrader()})
+        result = runner.run_task(task)
+        assert result.trials[0].metrics == {}

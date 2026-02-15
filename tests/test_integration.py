@@ -17,27 +17,28 @@ default_num_trials: 2
 tasks:
   - id: gene_lookup
     question: "What genes are associated with type 1 diabetes?"
-    expected_entities:
-      - INS
-      - HLA-DRB1
-    expected_complexity: complex
+    expected_output:
+      - type: entities
+        value:
+          - INS
+          - HLA-DRB1
+    tags:
+      complexity: complex
     graders:
       - type: code
-        checks:
-          - entity_presence
     num_trials: 2
   - id: pathway_check
     question: "Describe the insulin signaling pathway."
-    expected_entities:
-      - INSR
-      - IRS1
-    expected_cypher_patterns:
-      - "MATCH.*insulin"
+    expected_output:
+      - type: entities
+        value:
+          - INSR
+          - IRS1
+      - type: cypher_patterns
+        value:
+          - "MATCH.*insulin"
     graders:
       - type: code
-        checks:
-          - entity_presence
-          - cypher_pattern
     num_trials: 1
 """
 
@@ -106,14 +107,14 @@ name: partial
 tasks:
   - id: t1
     question: "Genes for diabetes?"
-    expected_entities:
-      - INS
-      - MISSING_GENE
-      - ANOTHER_MISSING
+    expected_output:
+      - type: entities
+        value:
+          - INS
+          - MISSING_GENE
+          - ANOTHER_MISSING
     graders:
       - type: code
-        checks:
-          - entity_presence
 """
         f = tmp_path / "partial.yaml"
         f.write_text(yaml)

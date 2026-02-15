@@ -11,19 +11,31 @@ from pydantic import BaseModel, Field
 class GraderConfig(BaseModel):
     """Configuration for a single grader attached to a task."""
     type: str
-    checks: list[str] = Field(default_factory=list)
     rubric: str = ""
     weight: float = 1.0
     params: dict[str, Any] = Field(default_factory=dict)
+
+
+class ExpectedOutput(BaseModel):
+    """A single ground-truth item, evaluated by domain-specific code graders."""
+    type: str          # "entities", "cypher_patterns", "mcq_answer", "numeric_range"
+    value: Any         # Ground truth, interpreted by code grader based on type
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+class MetricGroup(BaseModel):
+    """A group of execution metrics to compute from trial data."""
+    type: str          # "transcript", "latency", "cost"
+    metrics: list[str] = Field(default_factory=list)
 
 
 class Task(BaseModel):
     """A single evaluation task (test case)."""
     id: str
     question: str
-    expected_entities: list[str] = Field(default_factory=list)
-    expected_complexity: str | None = None
-    expected_cypher_patterns: list[str] = Field(default_factory=list)
+    expected_output: list[ExpectedOutput] = Field(default_factory=list)
+    tags: dict[str, Any] = Field(default_factory=dict)
+    tracked_metrics: list[MetricGroup] = Field(default_factory=list)
     graders: list[GraderConfig] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     num_trials: int = 1
@@ -36,6 +48,7 @@ class EvalSuite(BaseModel):
     task_ids: list[str] = Field(default_factory=list)
     default_graders: list[GraderConfig] = Field(default_factory=list)
     default_num_trials: int = 1
+    default_tracked_metrics: list[MetricGroup] = Field(default_factory=list)
 
 
 class TranscriptEvent(BaseModel):
@@ -73,6 +86,7 @@ class TrialResult(BaseModel):
     grades: list[GradeResult] = Field(default_factory=list)
     duration_ms: float = 0.0
     error: str | None = None
+    metrics: dict[str, Any] = Field(default_factory=dict)
 
 
 class EvalResult(BaseModel):

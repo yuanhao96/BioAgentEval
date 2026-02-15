@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 from bioagenteval.models import GradeResult, GraderConfig, Task, Transcript
 
@@ -16,6 +17,7 @@ class BaseGrader(ABC):
         outcome: str,
         transcript: Transcript,
         config: GraderConfig,
+        metrics: dict[str, Any] | None = None,
     ) -> GradeResult:
         """Grade an agent's output for one trial."""
         ...

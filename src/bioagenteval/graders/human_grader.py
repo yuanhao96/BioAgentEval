@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from bioagenteval.graders.base import BaseGrader
 from bioagenteval.models import GradeResult, GraderConfig, Task, Transcript
@@ -18,6 +19,7 @@ class HumanGrader(BaseGrader):
         outcome: str,
         transcript: Transcript,
         config: GraderConfig,
+        metrics: dict[str, Any] | None = None,
     ) -> GradeResult:
         logger.info("Task %s flagged for human review", task.id)
         return GradeResult(

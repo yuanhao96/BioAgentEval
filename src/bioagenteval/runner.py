@@ -6,6 +6,7 @@ import time
 from typing import Any
 
 from bioagenteval.harness import AgentHarness
+from bioagenteval.metrics import compute_metrics
 from bioagenteval.models import EvalResult, Task, Transcript, TrialResult
 
 logger = logging.getLogger(__name__)
@@ -50,13 +51,20 @@ class EvalRunner:
             transcript = Transcript(task_id=task.id)
             error = str(e)
 
+        # Compute metrics from tracked_metrics groups
+        trial_metrics = compute_metrics(
+            task.tracked_metrics, transcript, duration_ms,
+        )
+
         grades = []
         for grader_config in task.graders:
             grader = self.graders.get(grader_config.type)
             if grader is None:
                 logger.warning("No grader registered for type: %s", grader_config.type)
                 continue
-            grade = grader.grade(task, outcome, transcript, grader_config)
+            grade = grader.grade(
+                task, outcome, transcript, grader_config, metrics=trial_metrics,
+            )
             grades.append(grade)
 
         return TrialResult(
@@ -67,4 +75,5 @@ class EvalRunner:
             grades=grades,
             duration_ms=duration_ms,
             error=error,
+            metrics=trial_metrics,
         )

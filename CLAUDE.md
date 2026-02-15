@@ -41,7 +41,7 @@ docs/plans/            # Design docs and eval plans
 
 ```
 EvalSuite (named group of tasks)
-  └── Task (single question + expected entities + graders)
+  └── Task (question + expected_output + tags + graders)
         └── EvalResult (aggregated across trials of one task)
               └── TrialResult (one attempt)
                     ├── Transcript (full trajectory)
@@ -53,7 +53,7 @@ Key design decisions:
 - **Three grader types**: `code` (deterministic checks), `model` (LLM-based rubric scoring), `human` (calibration). Configured via `GraderConfig`.
 - **pass@k** uses the unbiased combinatorial estimator (not naive sampling). Implemented in `EvalResult.pass_at_k()`.
 - **Transcripts** capture both generic events and Neo4j-specific artifacts (Cypher queries, results) for debugging agent trajectories.
-- **Tasks** carry `expected_entities` (e.g., gene names, ENSEMBL IDs) and `expected_cypher_patterns` for matching against agent outputs.
+- **Tasks** carry typed `expected_output` items (entities, cypher_patterns, mcq_answer, numeric_range) and open `tags` for filtering/classification.
 
 ### Domain Context
 

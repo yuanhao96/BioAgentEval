@@ -4,7 +4,9 @@ from unittest.mock import MagicMock, patch
 
 from bioagenteval.graders.base import BaseGrader
 from bioagenteval.graders.model_grader import ModelGrader
-from bioagenteval.models import GradeResult, GraderConfig, Task, Transcript
+from bioagenteval.models import (
+    ExpectedOutput, GradeResult, GraderConfig, Task, Transcript,
+)
 
 
 def _mock_anthropic_response(score: float, passed: bool, reasoning: str):
@@ -22,7 +24,7 @@ def _mock_anthropic_response(score: float, passed: bool, reasoning: str):
 
 class TestModelGraderIsBaseGrader:
     def test_inherits_base(self):
-        with patch("bioagenteval.graders.model_grader.anthropic"):
+        with patch("bioagenteval.graders.model_grader.OpenAI"):
             grader = ModelGrader()
         assert isinstance(grader, BaseGrader)
 
@@ -32,7 +34,9 @@ class TestModelGraderGrade:
         self.task = Task(
             id="t1",
             question="What genes are associated with diabetes?",
-            expected_entities=["INS", "HLA-DRB1"],
+            expected_output=[
+                ExpectedOutput(type="entities", value=["INS", "HLA-DRB1"]),
+            ],
             graders=[
                 GraderConfig(
                     type="model",
@@ -43,12 +47,14 @@ class TestModelGraderGrade:
         self.transcript = Transcript(task_id="t1")
         self.config = self.task.graders[0]
 
-    @patch("bioagenteval.graders.model_grader.anthropic")
-    def test_passing_grade(self, mock_anthropic_mod):
+    @patch("bioagenteval.graders.model_grader.OpenAI")
+    def test_passing_grade(self, mock_openai_cls):
         mock_client = MagicMock()
-        mock_anthropic_mod.Anthropic.return_value = mock_client
-        mock_client.messages.create.return_value = _mock_anthropic_response(
-            0.9, True, "The answer is comprehensive."
+        mock_openai_cls.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(
+                content=json.dumps({"score": 0.9, "passed": True, "reasoning": "Comprehensive."})
+            ))]
         )
         grader = ModelGrader()
         result = grader.grade(
@@ -59,12 +65,14 @@ class TestModelGraderGrade:
         assert result.grader_type == "model"
         assert "reasoning" in result.details
 
-    @patch("bioagenteval.graders.model_grader.anthropic")
-    def test_failing_grade(self, mock_anthropic_mod):
+    @patch("bioagenteval.graders.model_grader.OpenAI")
+    def test_failing_grade(self, mock_openai_cls):
         mock_client = MagicMock()
-        mock_anthropic_mod.Anthropic.return_value = mock_client
-        mock_client.messages.create.return_value = _mock_anthropic_response(
-            0.2, False, "The answer is incomplete."
+        mock_openai_cls.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(
+                content=json.dumps({"score": 0.2, "passed": False, "reasoning": "Incomplete."})
+            ))]
         )
         grader = ModelGrader()
         result = grader.grade(
@@ -73,11 +81,11 @@ class TestModelGraderGrade:
         assert result.passed is False
         assert result.score == 0.2
 
-    @patch("bioagenteval.graders.model_grader.anthropic")
-    def test_api_error_returns_zero(self, mock_anthropic_mod):
+    @patch("bioagenteval.graders.model_grader.OpenAI")
+    def test_api_error_returns_zero(self, mock_openai_cls):
         mock_client = MagicMock()
-        mock_anthropic_mod.Anthropic.return_value = mock_client
-        mock_client.messages.create.side_effect = Exception("API error")
+        mock_openai_cls.return_value = mock_client
+        mock_client.chat.completions.create.side_effect = Exception("API error")
         grader = ModelGrader()
         result = grader.grade(
             self.task, "answer", self.transcript, self.config
@@ -86,16 +94,23 @@ class TestModelGraderGrade:
         assert result.score == 0.0
         assert "error" in result.details
 
-    @patch("bioagenteval.graders.model_grader.anthropic")
-    def test_custom_model(self, mock_anthropic_mod):
+    @patch("bioagenteval.graders.model_grader.OpenAI")
+    def test_metrics_in_prompt(self, mock_openai_cls):
         mock_client = MagicMock()
-        mock_anthropic_mod.Anthropic.return_value = mock_client
-        mock_client.messages.create.return_value = _mock_anthropic_response(
-            0.8, True, "Good."
+        mock_openai_cls.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(
+                content=json.dumps({"score": 0.8, "passed": True, "reasoning": "Good."})
+            ))]
         )
-        grader = ModelGrader(model="claude-opus-4-6")
+        grader = ModelGrader()
+        metrics = {"n_turns": 5, "n_tool_calls": 3}
         result = grader.grade(
-            self.task, "answer", self.transcript, self.config
+            self.task, "answer", self.transcript, self.config, metrics=metrics
         )
-        call_kwargs = mock_client.messages.create.call_args
-        assert call_kwargs.kwargs["model"] == "claude-opus-4-6"
+        # Verify that the prompt sent to the model includes metrics
+        call_args = mock_client.chat.completions.create.call_args
+        prompt_content = call_args.kwargs["messages"][0]["content"]
+        assert "n_turns" in prompt_content
+        assert "n_tool_calls" in prompt_content
+        assert result.passed is True

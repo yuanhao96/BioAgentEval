@@ -42,6 +42,7 @@ class EvalReporter:
                     "transcript": trial.transcript.model_dump(mode="json"),
                     "duration_ms": trial.duration_ms,
                     "error": trial.error,
+                    "metrics": trial.metrics,
                 })
 
             task_reports.append({

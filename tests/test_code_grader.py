@@ -2,7 +2,7 @@ import pytest
 from bioagenteval.graders.base import BaseGrader
 from bioagenteval.graders.code_grader import CodeGrader
 from bioagenteval.models import (
-    GraderConfig, GradeResult, Task, Transcript, TranscriptEvent,
+    ExpectedOutput, GraderConfig, GradeResult, Task, Transcript, TranscriptEvent,
 )
 
 
@@ -17,8 +17,8 @@ class TestEntityPresence:
         return Task(
             id="t1",
             question="Q?",
-            expected_entities=entities,
-            graders=[GraderConfig(type="code", checks=["entity_presence"])],
+            expected_output=[ExpectedOutput(type="entities", value=entities)],
+            graders=[GraderConfig(type="code")],
         )
 
     def test_all_entities_present(self):
@@ -55,7 +55,7 @@ class TestEntityPresence:
 
     def test_no_expected_entities(self):
         task = self.make_task([])
-        config = GraderConfig(type="code", checks=["entity_presence"])
+        config = GraderConfig(type="code")
         result = CodeGrader().grade(task, "anything", Transcript(task_id="t1"), config)
         assert result.passed is True
         assert result.score == 1.0
@@ -66,8 +66,8 @@ class TestCypherPattern:
         return Task(
             id="t1",
             question="Q?",
-            expected_cypher_patterns=patterns,
-            graders=[GraderConfig(type="code", checks=["cypher_pattern"])],
+            expected_output=[ExpectedOutput(type="cypher_patterns", value=patterns)],
+            graders=[GraderConfig(type="code")],
         )
 
     def test_cypher_pattern_found(self):
@@ -115,14 +115,11 @@ class TestMultipleChecks:
         task = Task(
             id="t1",
             question="Q?",
-            expected_entities=["INS"],
-            expected_cypher_patterns=["MATCH.*Gene"],
-            graders=[
-                GraderConfig(
-                    type="code",
-                    checks=["entity_presence", "cypher_pattern"],
-                )
+            expected_output=[
+                ExpectedOutput(type="entities", value=["INS"]),
+                ExpectedOutput(type="cypher_patterns", value=["MATCH.*Gene"]),
             ],
+            graders=[GraderConfig(type="code")],
         )
         transcript = Transcript(
             task_id="t1",
@@ -135,5 +132,112 @@ class TestMultipleChecks:
         )
         config = task.graders[0]
         result = CodeGrader().grade(task, "INS is a gene", transcript, config)
+        assert result.passed is True
+        assert result.score == 1.0
+
+
+class TestMcqAnswer:
+    def make_mcq_task(self, answer):
+        return Task(
+            id="t1",
+            question="Which is correct? A, B, C, D",
+            expected_output=[ExpectedOutput(type="mcq_answer", value=answer)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def test_exact_match(self):
+        task = self.make_mcq_task("B")
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "B", Transcript(task_id="t1"), config)
+        assert result.passed is True
+        assert result.score == 1.0
+
+    def test_answer_is_pattern(self):
+        task = self.make_mcq_task("B")
+        config = task.graders[0]
+        result = CodeGrader().grade(
+            task, "The answer is B", Transcript(task_id="t1"), config
+        )
+        assert result.passed is True
+
+    def test_parenthesized(self):
+        task = self.make_mcq_task("C")
+        config = task.graders[0]
+        result = CodeGrader().grade(
+            task, "I think (C) is correct", Transcript(task_id="t1"), config
+        )
+        assert result.passed is True
+
+    def test_wrong_answer(self):
+        task = self.make_mcq_task("B")
+        config = task.graders[0]
+        result = CodeGrader().grade(
+            task, "The answer is definitely A", Transcript(task_id="t1"), config
+        )
+        # "B" doesn't appear standalone in "The answer is definitely A"
+        assert result.passed is False
+        assert result.score == 0.0
+
+    def test_case_insensitive(self):
+        task = self.make_mcq_task("b")
+        config = task.graders[0]
+        result = CodeGrader().grade(
+            task, "Answer: B", Transcript(task_id="t1"), config
+        )
+        assert result.passed is True
+
+
+class TestNumericRange:
+    def make_numeric_task(self, value):
+        return Task(
+            id="t1",
+            question="What is the value?",
+            expected_output=[ExpectedOutput(type="numeric_range", value=value)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def test_exact_target(self):
+        task = self.make_numeric_task({"target": 42.0})
+        config = task.graders[0]
+        result = CodeGrader().grade(
+            task, "The value is 42.0", Transcript(task_id="t1"), config
+        )
+        assert result.passed is True
+
+    def test_within_range(self):
+        task = self.make_numeric_task({"min": 10, "max": 50})
+        config = task.graders[0]
+        result = CodeGrader().grade(
+            task, "The answer is 25", Transcript(task_id="t1"), config
+        )
+        assert result.passed is True
+
+    def test_outside_range(self):
+        task = self.make_numeric_task({"min": 10, "max": 50})
+        config = task.graders[0]
+        result = CodeGrader().grade(
+            task, "The answer is 100", Transcript(task_id="t1"), config
+        )
+        assert result.passed is False
+
+    def test_no_numbers_in_outcome(self):
+        task = self.make_numeric_task({"target": 42.0})
+        config = task.graders[0]
+        result = CodeGrader().grade(
+            task, "I have no idea", Transcript(task_id="t1"), config
+        )
+        assert result.passed is False
+        assert result.score == 0.0
+
+
+class TestNoExpectedOutput:
+    def test_empty_expected_output(self):
+        task = Task(
+            id="t1",
+            question="Q?",
+            graders=[GraderConfig(type="code")],
+        )
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "anything", Transcript(task_id="t1"), config)
         assert result.passed is True
         assert result.score == 1.0

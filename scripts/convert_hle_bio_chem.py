@@ -1,4 +1,4 @@
-"""Convert the HLE Bio/Chem HuggingFace dataset to a BioAgentEval YAML suite."""
+"""Convert the HLE Bio/Chem HuggingFace dataset to a BioAgentEval v2 YAML suite."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -38,6 +38,12 @@ def convert() -> None:
         answer_type = str(row["answer_type"])
         rationale = str(row["rationale"])
 
+        # Build expected_output based on answer type
+        if answer_type == "multipleChoice":
+            expected_output = [{"type": "mcq_answer", "value": answer}]
+        else:
+            expected_output = [{"type": "entities", "value": [answer]}]
+
         graders = [
             {
                 "type": "model",
@@ -45,15 +51,26 @@ def convert() -> None:
             },
         ]
 
+        # Build tags from metadata
+        tags = {}
+        raw_subject = str(row["raw_subject"])
+        category = str(row["category"])
+        if raw_subject:
+            tags["subject"] = raw_subject
+        if category:
+            tags["category"] = category
+        tags["answer_type"] = answer_type
+
         task = {
             "id": str(row["id"]),
             "question": str(row["question"]),
-            "expected_entities": [answer],
+            "expected_output": expected_output,
+            "tags": tags,
             "metadata": {
                 "answer": answer,
                 "answer_type": answer_type,
-                "raw_subject": str(row["raw_subject"]),
-                "category": str(row["category"]),
+                "raw_subject": raw_subject,
+                "category": category,
                 "rationale": rationale,
                 "source": "hle_bio_chem",
             },

@@ -65,7 +65,14 @@ def validate(suite_path):
     click.echo(f"Tasks: {len(tasks)}")
     for t in tasks:
         grader_types = [g.type for g in t.graders]
-        click.echo(f"  {t.id}: {t.num_trials} trials, graders={grader_types}")
+        eo_types = [eo.type for eo in t.expected_output]
+        tag_str = ", ".join(f"{k}={v}" for k, v in t.tags.items()) if t.tags else ""
+        parts = [f"  {t.id}: {t.num_trials} trials, graders={grader_types}"]
+        if eo_types:
+            parts.append(f"expected_output={eo_types}")
+        if tag_str:
+            parts.append(f"tags=[{tag_str}]")
+        click.echo(", ".join(parts))
     click.echo("Validation passed.")
 
 

@@ -71,3 +71,20 @@ class TestEvalReporter:
         assert trial["outcome"] == "answer_0"
         assert len(trial["grades"]) == 1
         assert trial["grades"][0]["score"] == 0.8
+
+    def test_trials_include_metrics(self):
+        trial = TrialResult(
+            task_id="t1",
+            trial_num=0,
+            outcome="answer",
+            transcript=Transcript(task_id="t1"),
+            grades=[GradeResult(grader_type="code", score=1.0, passed=True)],
+            duration_ms=500.0,
+            metrics={"n_turns": 3, "n_tool_calls": 2},
+        )
+        result = EvalResult(task_id="t1", trials=[trial])
+        report = EvalReporter.generate_report("s", [result])
+        trial_dict = report["results"][0]["trials"][0]
+        assert "metrics" in trial_dict
+        assert trial_dict["metrics"]["n_turns"] == 3
+        assert trial_dict["metrics"]["n_tool_calls"] == 2

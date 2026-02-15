@@ -1,6 +1,6 @@
 import pytest
 from bioagenteval.models import (
-    Task, GraderConfig, EvalSuite,
+    Task, GraderConfig, EvalSuite, ExpectedOutput, MetricGroup,
     TranscriptEvent, Transcript,
     GradeResult, TrialResult, EvalResult,
     AgentResponse,
@@ -11,7 +11,6 @@ class TestGraderConfig:
     def test_defaults(self):
         gc = GraderConfig(type="code")
         assert gc.type == "code"
-        assert gc.checks == []
         assert gc.rubric == ""
         assert gc.weight == 1.0
         assert gc.params == {}
@@ -26,6 +25,44 @@ class TestGraderConfig:
         assert gc.weight == 0.5
 
 
+class TestExpectedOutput:
+    def test_minimal(self):
+        eo = ExpectedOutput(type="entities", value=["INS", "HLA-DRB1"])
+        assert eo.type == "entities"
+        assert eo.value == ["INS", "HLA-DRB1"]
+        assert eo.params == {}
+
+    def test_with_params(self):
+        eo = ExpectedOutput(
+            type="numeric_range",
+            value={"target": 42, "min": 40, "max": 45},
+            params={"tolerance": 0.1},
+        )
+        assert eo.type == "numeric_range"
+        assert eo.params["tolerance"] == 0.1
+
+    def test_mcq_answer(self):
+        eo = ExpectedOutput(type="mcq_answer", value="B")
+        assert eo.type == "mcq_answer"
+        assert eo.value == "B"
+
+    def test_cypher_patterns(self):
+        eo = ExpectedOutput(type="cypher_patterns", value=["MATCH.*Gene"])
+        assert eo.value == ["MATCH.*Gene"]
+
+
+class TestMetricGroup:
+    def test_minimal(self):
+        mg = MetricGroup(type="transcript")
+        assert mg.type == "transcript"
+        assert mg.metrics == []
+
+    def test_with_metrics(self):
+        mg = MetricGroup(type="transcript", metrics=["n_turns", "n_tool_calls"])
+        assert len(mg.metrics) == 2
+        assert "n_turns" in mg.metrics
+
+
 class TestTask:
     def test_minimal_task(self):
         t = Task(
@@ -34,7 +71,9 @@ class TestTask:
         )
         assert t.id == "t1"
         assert t.question == "What genes are associated with type 1 diabetes?"
-        assert t.expected_entities == []
+        assert t.expected_output == []
+        assert t.tags == {}
+        assert t.tracked_metrics == []
         assert t.graders == []
         assert t.metadata == {}
         assert t.num_trials == 1
@@ -43,10 +82,15 @@ class TestTask:
         t = Task(
             id="t2",
             question="Tell me about INS gene",
-            expected_entities=["INS", "ENSG00000254647"],
-            expected_complexity="simple",
+            expected_output=[
+                ExpectedOutput(type="entities", value=["INS", "ENSG00000254647"]),
+            ],
+            tags={"complexity": "simple"},
+            tracked_metrics=[
+                MetricGroup(type="transcript", metrics=["n_turns"]),
+            ],
             graders=[
-                GraderConfig(type="code", checks=["entity_presence"]),
+                GraderConfig(type="code"),
                 GraderConfig(type="model", rubric="Is the answer complete?"),
             ],
             metadata={"category": "entity_overview"},
@@ -55,6 +99,9 @@ class TestTask:
         assert len(t.graders) == 2
         assert t.graders[0].type == "code"
         assert t.num_trials == 3
+        assert len(t.expected_output) == 1
+        assert t.expected_output[0].type == "entities"
+        assert t.tags["complexity"] == "simple"
 
     def test_task_requires_question(self):
         with pytest.raises(Exception):
@@ -118,6 +165,18 @@ class TestTrialResult:
         )
         assert tr.trial_num == 0
         assert tr.duration_ms == 1234.5
+        assert tr.metrics == {}
+
+    def test_trial_result_with_metrics(self):
+        tr = TrialResult(
+            task_id="t1",
+            trial_num=0,
+            outcome="answer",
+            transcript=Transcript(task_id="t1"),
+            metrics={"n_turns": 3, "n_tool_calls": 5},
+        )
+        assert tr.metrics["n_turns"] == 3
+        assert tr.metrics["n_tool_calls"] == 5
 
 
 class TestEvalResult:
@@ -181,3 +240,14 @@ class TestEvalSuite:
             task_ids=["t1", "t2"],
         )
         assert len(s.task_ids) == 2
+        assert s.default_tracked_metrics == []
+
+    def test_suite_with_default_tracked_metrics(self):
+        s = EvalSuite(
+            name="core",
+            default_tracked_metrics=[
+                MetricGroup(type="transcript", metrics=["n_turns"]),
+            ],
+        )
+        assert len(s.default_tracked_metrics) == 1
+        assert s.default_tracked_metrics[0].type == "transcript"

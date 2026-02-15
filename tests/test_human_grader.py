@@ -19,3 +19,12 @@ class TestHumanGrader:
         assert result.passed is False
         assert result.score == 0.0
         assert "pending" in result.details.get("status", "")
+
+    def test_accepts_metrics_kwarg(self):
+        task = Task(id="t1", question="Q?")
+        config = GraderConfig(type="human")
+        result = HumanGrader().grade(
+            task, "answer", Transcript(task_id="t1"), config,
+            metrics={"n_turns": 3},
+        )
+        assert result.grader_type == "human"
