@@ -596,3 +596,356 @@ class TestNoExpectedOutput:
         result = CodeGrader().grade(task, "anything", Transcript(task_id="t1"), config)
         assert result.passed is True
         assert result.score == 1.0
+
+
+# ---------------------------------------------------------------------------
+# Agent-type-specific checks
+# ---------------------------------------------------------------------------
+
+
+class TestCodeValid:
+    def make_task(self, value):
+        return Task(
+            id="t1",
+            question="Write a Python function.",
+            expected_output=[ExpectedOutput(type="code_valid", value=value)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def test_valid_python(self):
+        task = self.make_task({"language": "python"})
+        outcome = "def hello():\n    return 42"
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+        assert result.passed is True
+
+    def test_valid_python_in_markdown(self):
+        task = self.make_task({"language": "python"})
+        outcome = '```python\ndef greet(name):\n    return f"Hello {name}"\n```'
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+
+    def test_invalid_python(self):
+        task = self.make_task({"language": "python"})
+        outcome = "def broken(\n    return"
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 0.0
+        assert result.passed is False
+        assert "syntax_errors" in result.details
+
+    def test_default_language_is_python(self):
+        task = self.make_task({})
+        outcome = "x = 1 + 2"
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+
+    def test_unsupported_language(self):
+        task = self.make_task({"language": "rust"})
+        outcome = "fn main() {}"
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 0.0
+        assert "unsupported language" in result.details.get("error", "")
+
+    def test_multiple_code_blocks(self):
+        task = self.make_task({"language": "python"})
+        outcome = '```python\nx = 1\n```\nSome text\n```python\ny = 2\n```'
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+
+    def test_one_invalid_block_fails(self):
+        task = self.make_task({"language": "python"})
+        outcome = '```python\nx = 1\n```\n```python\ndef bad(\n```'
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 0.0
+
+
+class TestTestResults:
+    def _transcript_with_tests(self, test_results):
+        events = [
+            TranscriptEvent(
+                event_type="test_result",
+                data={"test_name": name, "passed": passed},
+            )
+            for name, passed in test_results
+        ]
+        return Transcript(task_id="t1", events=events)
+
+    def make_task(self, value):
+        return Task(
+            id="t1",
+            question="Fix the bug.",
+            expected_output=[ExpectedOutput(type="test_results", value=value)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def test_all_expected_tests_pass(self):
+        task = self.make_task({"expected_tests": ["test_a", "test_b"]})
+        transcript = self._transcript_with_tests([("test_a", True), ("test_b", True)])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "fixed", transcript, config)
+        assert result.score == 1.0
+        assert result.passed is True
+
+    def test_partial_expected_tests(self):
+        task = self.make_task({"expected_tests": ["test_a", "test_b"]})
+        transcript = self._transcript_with_tests([("test_a", True), ("test_b", False)])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "fixed", transcript, config)
+        assert result.score == 0.5
+        assert "test_a" in result.details["passed_tests"]
+        assert "test_b" in result.details["failed_tests"]
+
+    def test_no_test_events(self):
+        task = self.make_task({"expected_tests": ["test_a"]})
+        transcript = Transcript(task_id="t1")
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "fixed", transcript, config)
+        assert result.score == 0.0
+        assert "error" in result.details
+
+    def test_min_pass_rate_met(self):
+        task = self.make_task({"min_pass_rate": 0.8})
+        transcript = self._transcript_with_tests([
+            ("t1", True), ("t2", True), ("t3", True), ("t4", True), ("t5", False),
+        ])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "fixed", transcript, config)
+        assert result.score == 1.0
+        assert result.details["pass_rate"] == pytest.approx(0.8)
+
+    def test_min_pass_rate_not_met(self):
+        task = self.make_task({"min_pass_rate": 1.0})
+        transcript = self._transcript_with_tests([("t1", True), ("t2", False)])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "fixed", transcript, config)
+        assert result.score == 0.0
+
+    def test_default_min_pass_rate_is_1(self):
+        task = self.make_task({})
+        transcript = self._transcript_with_tests([("t1", True), ("t2", False)])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "fixed", transcript, config)
+        assert result.score == 0.0  # Default threshold is 1.0
+
+
+class TestGroundedness:
+    def make_task(self, value):
+        return Task(
+            id="t1",
+            question="Summarize the research.",
+            expected_output=[ExpectedOutput(type="groundedness", value=value)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def test_required_sources_all_found(self):
+        task = self.make_task({"required_sources": [
+            "https://pubmed.ncbi.nlm.nih.gov/12345",
+            "10.1038/nature12345",
+        ]})
+        outcome = (
+            "According to https://pubmed.ncbi.nlm.nih.gov/12345, "
+            "the gene is involved (10.1038/nature12345)."
+        )
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+
+    def test_required_sources_partial(self):
+        task = self.make_task({"required_sources": [
+            "https://pubmed.ncbi.nlm.nih.gov/12345",
+            "https://example.com/missing",
+        ]})
+        outcome = "See https://pubmed.ncbi.nlm.nih.gov/12345 for details."
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 0.5
+
+    def test_min_citations_met(self):
+        task = self.make_task({"min_citations": 2})
+        outcome = "Studies [1] and [2] show that the protein is essential."
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+        assert result.details["detected_count"] >= 2
+
+    def test_min_citations_not_met(self):
+        task = self.make_task({"min_citations": 3})
+        outcome = "The gene is important [1]."
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 0.0
+
+    def test_detects_url_citations(self):
+        task = self.make_task({"min_citations": 1})
+        outcome = "Source: https://www.nature.com/articles/s41586"
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+
+    def test_detects_doi_citations(self):
+        task = self.make_task({"min_citations": 1})
+        outcome = "Published as 10.1038/s41586-021-03819-2"
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+
+    def test_detects_author_year_citations(self):
+        task = self.make_task({"min_citations": 1})
+        outcome = "As shown by Smith et al., 2023, the pathway is active."
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+
+    def test_no_citations(self):
+        task = self.make_task({"min_citations": 1})
+        outcome = "The gene is important."
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 0.0
+
+    def test_default_mode_any_citation(self):
+        task = self.make_task({})
+        outcome = "See [1] for details."
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+
+
+class TestKeywordCoverage:
+    def make_task(self, value):
+        return Task(
+            id="t1",
+            question="Explain the pathway.",
+            expected_output=[ExpectedOutput(type="keyword_coverage", value=value)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def test_all_keywords_found(self):
+        task = self.make_task({"keywords": ["insulin", "glucose", "pancreas"]})
+        outcome = "Insulin is produced by the pancreas and regulates glucose."
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+
+    def test_partial_keywords(self):
+        task = self.make_task({"keywords": ["insulin", "glucose", "liver"]})
+        outcome = "Insulin regulates glucose levels."
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == pytest.approx(2.0 / 3.0)
+
+    def test_no_keywords_found(self):
+        task = self.make_task({"keywords": ["BRCA1", "mutation"]})
+        outcome = "The weather is nice today."
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 0.0
+
+    def test_case_insensitive_substring(self):
+        task = self.make_task({"keywords": ["INSULIN", "GLUCOSE"]})
+        outcome = "insulin and glucose are related."
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+
+    def test_regex_mode(self):
+        task = self.make_task({
+            "keywords": [r"insulin\s+signaling", r"type\s+[12]\s+diabetes"],
+            "match_mode": "regex",
+        })
+        outcome = "Insulin signaling is disrupted in type 2 diabetes."
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+
+    def test_empty_keywords(self):
+        task = self.make_task({"keywords": []})
+        outcome = "anything"
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.score == 1.0
+
+
+class TestStateCheck:
+    def _transcript_with_state(self, state_data):
+        events = [
+            TranscriptEvent(event_type="state_snapshot", data=state_data),
+        ]
+        return Transcript(task_id="t1", events=events)
+
+    def make_task(self, value):
+        return Task(
+            id="t1",
+            question="Update the record.",
+            expected_output=[ExpectedOutput(type="state_check", value=value)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def test_all_assertions_pass(self):
+        task = self.make_task({"assertions": {"status": "resolved", "priority": "high"}})
+        transcript = self._transcript_with_state({"status": "resolved", "priority": "high"})
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "done", transcript, config)
+        assert result.score == 1.0
+        assert result.passed is True
+
+    def test_partial_assertions(self):
+        task = self.make_task({"assertions": {"status": "resolved", "priority": "low"}})
+        transcript = self._transcript_with_state({"status": "resolved", "priority": "high"})
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "done", transcript, config)
+        assert result.score == 0.5
+        assert result.details["failed_assertions"][0]["key"] == "priority"
+
+    def test_no_state_events(self):
+        task = self.make_task({"assertions": {"status": "done"}})
+        transcript = Transcript(task_id="t1")
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "done", transcript, config)
+        assert result.score == 0.0
+        assert "error" in result.details
+
+    def test_nested_dot_notation(self):
+        task = self.make_task({"assertions": {"user.email": "test@example.com"}})
+        transcript = self._transcript_with_state({
+            "user": {"email": "test@example.com", "name": "Test"},
+        })
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "done", transcript, config)
+        assert result.score == 1.0
+
+    def test_nested_key_missing(self):
+        task = self.make_task({"assertions": {"user.phone": "555-1234"}})
+        transcript = self._transcript_with_state({
+            "user": {"email": "test@example.com"},
+        })
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "done", transcript, config)
+        assert result.score == 0.0
+        assert result.details["failed_assertions"][0]["actual"] is None
+
+    def test_uses_last_snapshot(self):
+        """Multiple state_snapshot events — should use the last one."""
+        events = [
+            TranscriptEvent(event_type="state_snapshot", data={"status": "open"}),
+            TranscriptEvent(event_type="state_snapshot", data={"status": "resolved"}),
+        ]
+        task = self.make_task({"assertions": {"status": "resolved"}})
+        transcript = Transcript(task_id="t1", events=events)
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "done", transcript, config)
+        assert result.score == 1.0
+
+    def test_empty_assertions(self):
+        task = self.make_task({"assertions": {}})
+        transcript = self._transcript_with_state({"anything": True})
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "done", transcript, config)
+        assert result.score == 1.0

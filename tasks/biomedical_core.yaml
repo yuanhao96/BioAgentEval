@@ -107,3 +107,65 @@ tasks:
           Does the answer describe the insulin signaling pathway accurately,
           mentioning key receptor and downstream signaling molecules?
     num_trials: 3
+
+  # --- Agent-type-specific evaluation examples ---
+
+  # Coding agent: validate generated code and test results
+  - id: coding_agent_gene_parser
+    question: "Write a Python function that parses a gene name from a FASTA header line."
+    expected_output:
+      - type: code_valid
+        value:
+          language: python
+      - type: test_results
+        value:
+          expected_tests:
+            - test_parse_simple_header
+            - test_parse_with_description
+    tags:
+      complexity: simple
+      agent_type: coding
+    graders:
+      - type: code
+    num_trials: 1
+
+  # Research agent: verify citations and topic coverage
+  - id: research_agent_brca1_review
+    question: "Summarize recent research on BRCA1 mutations and breast cancer risk."
+    expected_output:
+      - type: keyword_coverage
+        value:
+          keywords:
+            - BRCA1
+            - breast cancer
+            - mutation
+            - risk
+      - type: groundedness
+        value:
+          min_citations: 2
+    tags:
+      complexity: complex
+      agent_type: research
+    graders:
+      - type: code
+      - type: model
+        rubric: >
+          Does the summary accurately describe BRCA1 mutations and their
+          association with breast cancer? Are claims supported by cited sources?
+    num_trials: 1
+
+  # Conversational/computer-use agent: verify state changes
+  - id: conversational_agent_update_record
+    question: "Update the patient record to mark allergy status as 'penicillin' and set priority to 'high'."
+    expected_output:
+      - type: state_check
+        value:
+          assertions:
+            patient.allergy: penicillin
+            patient.priority: high
+    tags:
+      complexity: simple
+      agent_type: conversational
+    graders:
+      - type: code
+    num_trials: 1

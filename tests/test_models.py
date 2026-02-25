@@ -344,6 +344,92 @@ class TestWeightedScore:
         assert trial.weighted_score() == pytest.approx(0.7)
 
 
+class TestUnknownGradeHandling:
+    def test_weighted_score_excludes_unknown(self):
+        trial = TrialResult(
+            task_id="t1", trial_num=0, outcome="answer",
+            transcript=Transcript(task_id="t1"),
+            grades=[
+                GradeResult(grader_type="code", score=1.0, passed=True, weight=1.0),
+                GradeResult(grader_type="model", score=0.0, passed=False, weight=1.0,
+                            details={"status": "unknown", "reasoning": "Insufficient info."}),
+            ],
+        )
+        # Only the code grade should count: 1.0
+        assert trial.weighted_score() == pytest.approx(1.0)
+
+    def test_weighted_passed_excludes_unknown(self):
+        trial = TrialResult(
+            task_id="t1", trial_num=0, outcome="answer",
+            transcript=Transcript(task_id="t1"),
+            grades=[
+                GradeResult(grader_type="code", score=0.8, passed=True, weight=1.0),
+                GradeResult(grader_type="model", score=0.0, passed=False, weight=1.0,
+                            details={"status": "unknown"}),
+            ],
+        )
+        # Only code grade counts: 0.8 >= 0.5
+        assert trial.weighted_passed(threshold=0.5) is True
+
+    def test_all_unknown_returns_zero(self):
+        trial = TrialResult(
+            task_id="t1", trial_num=0, outcome="answer",
+            transcript=Transcript(task_id="t1"),
+            grades=[
+                GradeResult(grader_type="model", score=0.0, passed=False, weight=1.0,
+                            details={"status": "unknown"}),
+                GradeResult(grader_type="model", score=0.0, passed=False, weight=1.0,
+                            details={"status": "unknown"}),
+            ],
+        )
+        assert trial.weighted_score() == 0.0
+        assert trial.weighted_passed() is False
+
+    def test_has_unknown_grades_true(self):
+        trial = TrialResult(
+            task_id="t1", trial_num=0, outcome="answer",
+            transcript=Transcript(task_id="t1"),
+            grades=[
+                GradeResult(grader_type="code", score=1.0, passed=True),
+                GradeResult(grader_type="model", score=0.0, passed=False,
+                            details={"status": "unknown"}),
+            ],
+        )
+        assert trial.has_unknown_grades() is True
+
+    def test_has_unknown_grades_false(self):
+        trial = TrialResult(
+            task_id="t1", trial_num=0, outcome="answer",
+            transcript=Transcript(task_id="t1"),
+            grades=[
+                GradeResult(grader_type="code", score=1.0, passed=True),
+                GradeResult(grader_type="model", score=0.8, passed=True),
+            ],
+        )
+        assert trial.has_unknown_grades() is False
+
+    def test_no_grades_has_unknown_false(self):
+        trial = TrialResult(
+            task_id="t1", trial_num=0, outcome="answer",
+            transcript=Transcript(task_id="t1"),
+        )
+        assert trial.has_unknown_grades() is False
+
+    def test_mixed_known_unknown_weighted_score(self):
+        trial = TrialResult(
+            task_id="t1", trial_num=0, outcome="answer",
+            transcript=Transcript(task_id="t1"),
+            grades=[
+                GradeResult(grader_type="code", score=0.8, passed=True, weight=2.0),
+                GradeResult(grader_type="model", score=0.0, passed=False, weight=1.0,
+                            details={"status": "unknown"}),
+                GradeResult(grader_type="model", score=0.6, passed=True, weight=1.0),
+            ],
+        )
+        # Known grades: code(0.8*2) + model(0.6*1) = 2.2 / 3.0
+        assert trial.weighted_score() == pytest.approx(2.2 / 3.0)
+
+
 class TestConvergenceCheck:
     def test_all_pass_converged(self):
         trials = [
@@ -436,6 +522,15 @@ class TestEvalSuite:
     def test_suite_eval_type_default(self):
         s = EvalSuite(name="core")
         assert s.eval_type == ""
+
+    def test_suite_eval_type_capability(self):
+        s = EvalSuite(name="core", eval_type="capability")
+        assert s.eval_type == "capability"
+
+    def test_suite_eval_type_invalid_rejected(self):
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            EvalSuite(name="core", eval_type="invalid_type")
 
     def test_suite_with_default_tracked_metrics(self):
         s = EvalSuite(

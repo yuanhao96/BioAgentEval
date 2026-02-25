@@ -287,3 +287,130 @@ class TestEvalRunner:
         result = runner.run_task(task)
         assert result.trials[0].grades[0].passed is False
         assert "error" in result.trials[0].grades[0].details
+
+    def test_hooks_setup_and_teardown_called(self):
+        calls = []
+
+        class TrackingHook:
+            def setup(self, task):
+                calls.append(("setup", task.id))
+
+            def teardown(self, task, trial):
+                calls.append(("teardown", task.id))
+
+        task = Task(
+            id="t1", question="Q?",
+            graders=[GraderConfig(type="code")],
+            num_trials=2,
+        )
+        runner = EvalRunner(
+            agent=FakeAgent(), graders={"code": FakeGrader()},
+            hooks=[TrackingHook()],
+        )
+        runner.run_task(task)
+
+        assert calls == [
+            ("setup", "t1"), ("teardown", "t1"),
+            ("setup", "t1"), ("teardown", "t1"),
+        ]
+
+    def test_hook_error_does_not_break_trial(self):
+        class FailingHook:
+            def setup(self, task):
+                raise RuntimeError("Setup boom")
+
+            def teardown(self, task, trial):
+                raise RuntimeError("Teardown boom")
+
+        task = Task(
+            id="t1", question="Q?",
+            graders=[GraderConfig(type="code")],
+            num_trials=1,
+        )
+        runner = EvalRunner(
+            agent=FakeAgent(), graders={"code": FakeGrader()},
+            hooks=[FailingHook()],
+        )
+        result = runner.run_task(task)
+
+        # Trial should still succeed despite hook failures
+        assert len(result.trials) == 1
+        assert result.trials[0].grades[0].passed is True
+
+    def test_multiple_hooks_all_called(self):
+        calls = []
+
+        class HookA:
+            def setup(self, task):
+                calls.append("A_setup")
+            def teardown(self, task, trial):
+                calls.append("A_teardown")
+
+        class HookB:
+            def setup(self, task):
+                calls.append("B_setup")
+            def teardown(self, task, trial):
+                calls.append("B_teardown")
+
+        task = Task(
+            id="t1", question="Q?",
+            graders=[GraderConfig(type="code")],
+            num_trials=1,
+        )
+        runner = EvalRunner(
+            agent=FakeAgent(), graders={"code": FakeGrader()},
+            hooks=[HookA(), HookB()],
+        )
+        runner.run_task(task)
+
+        assert calls == ["A_setup", "B_setup", "A_teardown", "B_teardown"]
+
+    def test_trial_timeout(self):
+        import time as _time
+
+        class SlowAgent:
+            def run(self, question):
+                _time.sleep(5)
+                return AgentResponse(
+                    outcome="late", transcript=Transcript(task_id="t1"),
+                )
+            def reset(self):
+                pass
+
+        task = Task(
+            id="t1", question="Q?",
+            graders=[GraderConfig(type="code")],
+            num_trials=1,
+            metadata={"timeout": 0.1},
+        )
+        runner = EvalRunner(agent=SlowAgent(), graders={"code": FakeGrader()})
+        result = runner.run_task(task)
+
+        assert result.trials[0].error is not None
+        assert "timed out" in result.trials[0].error
+
+    def test_default_timeout(self):
+        import time as _time
+
+        class SlowAgent:
+            def run(self, question):
+                _time.sleep(5)
+                return AgentResponse(
+                    outcome="late", transcript=Transcript(task_id="t1"),
+                )
+            def reset(self):
+                pass
+
+        task = Task(
+            id="t1", question="Q?",
+            graders=[GraderConfig(type="code")],
+            num_trials=1,
+        )
+        runner = EvalRunner(
+            agent=SlowAgent(), graders={"code": FakeGrader()},
+            default_timeout=0.1,
+        )
+        result = runner.run_task(task)
+
+        assert result.trials[0].error is not None
+        assert "timed out" in result.trials[0].error

@@ -2,58 +2,53 @@
 
 ## Goal Summary
 
-Extend BioAgentEval's features (new graders, metrics) and improve robustness to support all agent evaluation applications described in Anthropic's "Demystifying Evals for AI Agents" guide — including coding agents, conversational agents, research agents, and computer-use agents. This means closing gaps in metrics (pass^k, cost, latency percentiles), grader capabilities (tool call verification, trajectory grading, turn limits), eval suite management (tag filtering, regression/capability classification, run comparison), and execution robustness (concurrency, retries, convergence analysis).
+Extend BioAgentEval's features (new graders, metrics) and improve robustness to support all agent evaluation applications described in Anthropic's "Demystifying Evals for AI Agents" guide. This includes: multi-provider model grading (Anthropic + OpenAI), LLM judge enhancements (pairwise comparison, multi-judge consensus, uncertainty handling), agent-type-specific evaluation patterns (coding, research, conversational, computer-use), suite lifecycle management (capability vs regression classification, saturation-based promotion), and robustness/observability improvements (trial isolation, transcript analysis, grader calibration).
 
 ## Completed Milestones
 
-### Milestone: Core Metrics & Grader Weight Support
+### Milestone: Multi-Provider Model Grader + LLM Judge Enhancements
 - **Status**: completed
 - **Date completed**: 2026-02-25
-- **Summary**: Added pass^k metric, grader weight aggregation, estimated_cost metric, and latency percentiles (p50/p95) to report summary. 18 new tests, 138 total.
+- **Summary**: Added LLMClient abstraction supporting both OpenAI and Anthropic providers, LLM judge "Unknown" escape hatch, PairwiseGrader for comparing agent outputs, and ConsensusGrader for multi-judge majority vote aggregation.
 - **Acceptance criteria met**:
-  - [x] pass^k metric implemented with tests
-  - [x] GraderConfig.weight honored in score aggregation with tests
-  - [x] Cost metric (token pricing estimate) added to registry
-  - [x] Latency percentile metrics (p50, p95) added to registry
-  - [x] Documentation updated (README, CLAUDE.md)
+  - [x] Model grader supports both `anthropic` and `openai` providers via config
+  - [x] LLM judge can return "Unknown" when insufficient info (not penalizing agent unfairly)
+  - [x] Pairwise comparison grader compares two agent outputs and picks the better one
+  - [x] Multi-judge consensus runs N LLM judges and aggregates via majority vote
+  - [x] All new features have tests; existing 181 tests still pass (now 224 total)
 
-### Milestone: Tool Call & Trajectory Grading
+### Milestone: Agent-Type Evaluation Patterns
 - **Status**: completed
 - **Date completed**: 2026-02-25
-- **Summary**: Added tool_calls, turn_limit, and trajectory_pattern expected_output types to CodeGrader. 18 new tests, 156 total.
+- **Summary**: Added 5 new CodeGrader check types for agent-type-specific evaluation: code_valid and test_results (coding agents), groundedness and keyword_coverage (research agents), state_check (conversational/computer-use agents). Added 3 example tasks and 35 new tests.
 - **Acceptance criteria met**:
-  - [x] tool_call_verification grader implemented with tests
-  - [x] turn_limit grader implemented with tests
-  - [x] trajectory_pattern grader implemented with tests
-  - [x] Example tasks added to biomedical_core.yaml
-  - [x] Documentation updated
+  - [x] New `expected_output` types for agent-type-specific checks with corresponding CodeGrader implementations
+  - [x] Example tasks demonstrating each agent type's evaluation pattern
+  - [x] Documentation of when to use each check type
+  - [x] All new checks have dedicated tests (259 total, 0 regressions)
 
-### Milestone: Eval Suite Management & CLI Enhancements
+### Milestone: Suite Lifecycle & Eval-Driven Development
 - **Status**: completed
 - **Date completed**: 2026-02-25
-- **Summary**: Added tag filtering (--tags), eval_type classification, saturation detection, and diff CLI command. 13 new tests, 169 total.
+- **Summary**: Added eval_type Literal validation, suite_manager.py with promote_suite(), generate_tasks_from_failures(), and check_suite_balance(). Added 3 CLI commands (promote, generate-task, check-balance). 18 new tests, 277 total, 0 regressions.
 - **Acceptance criteria met**:
-  - [x] Tag-based task filtering in CLI (--tags complexity=simple)
-  - [x] Regression vs. capability eval_type classification
-  - [x] Saturation detection in reporting
-  - [x] Run comparison (diff two JSON reports)
-  - [x] Documentation updated
+  - [x] `EvalSuite` model validates `eval_type` field via `Literal["", "capability", "regression"]`
+  - [x] CLI `promote` command graduates saturated capability suites to regression
+  - [x] CLI `generate-task` command scaffolds new tasks from failure reports
+  - [x] Suite balance checker warns about class imbalance in tags/difficulty
+  - [x] Tests for all new functionality (18 new tests)
 
-### Milestone: Robustness & Concurrent Execution
+### Milestone: Robustness, Isolation & Observability
 - **Status**: completed
 - **Date completed**: 2026-02-25
-- **Summary**: Added parallel execution (ThreadPoolExecutor), retry with backoff, Wilson CI convergence analysis, and should_fail negative test support. 12 new tests, 181 total.
+- **Summary**: Added TrialHook Protocol for trial isolation (setup/teardown), transcript analysis utilities (summarize, extract tool sequence, detect retries), grader calibration workflow (accuracy/precision/recall/confusion matrix), and trial timeout support (per-task and runner-level). 25 new tests, 302 total, 0 regressions.
 - **Acceptance criteria met**:
-  - [x] Parallel task execution via max_concurrency
-  - [x] Retry logic with exponential backoff for API-backed graders
-  - [x] Convergence analysis (Wilson score CI)
-  - [x] Negative test case support (should_fail flag)
-  - [x] Documentation updated
+  - [x] Trial isolation with environment setup/teardown hooks (TrialHook Protocol)
+  - [x] Transcript analysis utilities for debugging agent trajectories (3 functions)
+  - [x] Grader calibration workflow for validating grader accuracy (calibrate_grader)
+  - [x] Trial timeout support (per-task via metadata, runner-level default)
+  - [x] Tests for all new functionality (25 new tests)
 
-## Current Milestone
+## Project Complete
 
-(All planned milestones completed)
-
-## Upcoming Milestones
-
-(None — project goal satisfied)
+All 4 milestones completed. 302 tests pass. The eval harness now supports all major patterns from Anthropic's "Demystifying Evals for AI Agents" guide.

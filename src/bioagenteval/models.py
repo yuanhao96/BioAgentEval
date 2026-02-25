@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import math
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -46,7 +46,7 @@ class EvalSuite(BaseModel):
     """A named collection of tasks."""
     name: str
     description: str = ""
-    eval_type: str = ""  # "capability", "regression", or empty
+    eval_type: Literal["", "capability", "regression"] = ""
     task_ids: list[str] = Field(default_factory=list)
     default_graders: list[GraderConfig] = Field(default_factory=list)
     default_num_trials: int = 1
@@ -91,17 +91,35 @@ class TrialResult(BaseModel):
     error: str | None = None
     metrics: dict[str, Any] = Field(default_factory=dict)
 
+    def _known_grades(self) -> list[GradeResult]:
+        """Return grades excluding those with 'unknown' status."""
+        return [
+            g for g in self.grades
+            if g.details.get("status") != "unknown"
+        ]
+
+    def has_unknown_grades(self) -> bool:
+        """Whether any grades have 'unknown' status."""
+        return any(g.details.get("status") == "unknown" for g in self.grades)
+
     def weighted_score(self) -> float:
-        """Weighted average of grade scores using each grade's weight."""
-        if not self.grades:
+        """Weighted average of grade scores using each grade's weight.
+
+        Grades with status 'unknown' are excluded from the calculation.
+        """
+        known = self._known_grades()
+        if not known:
             return 0.0
-        total_weight = sum(g.weight for g in self.grades)
+        total_weight = sum(g.weight for g in known)
         if total_weight == 0:
             return 0.0
-        return sum(g.score * g.weight for g in self.grades) / total_weight
+        return sum(g.score * g.weight for g in known) / total_weight
 
     def weighted_passed(self, threshold: float = 0.5) -> bool:
-        """Whether the weighted score meets the pass threshold."""
+        """Whether the weighted score meets the pass threshold.
+
+        Grades with status 'unknown' are excluded from the calculation.
+        """
         return self.weighted_score() >= threshold
 
 

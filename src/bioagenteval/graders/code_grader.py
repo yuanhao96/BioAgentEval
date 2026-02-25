@@ -1,6 +1,7 @@
 """Deterministic code-based grader: dispatches on expected_output types."""
 from __future__ import annotations
 
+import ast
 import json
 import re
 from typing import Any
@@ -60,6 +61,28 @@ class CodeGrader(BaseGrader):
                 check_results["trajectory_pattern"] = _check_trajectory_pattern(
                     eo.value, transcript,
                 )
+            elif eo.type == "code_valid":
+                cv_score, cv_details = _check_code_valid(eo.value, outcome)
+                check_results["code_valid"] = cv_score
+                extra_details.update(cv_details)
+            elif eo.type == "test_results":
+                tr_score, tr_details = _check_test_results(
+                    eo.value, transcript,
+                )
+                check_results["test_results"] = tr_score
+                extra_details.update(tr_details)
+            elif eo.type == "groundedness":
+                gr_score, gr_details = _check_groundedness(eo.value, outcome)
+                check_results["groundedness"] = gr_score
+                extra_details.update(gr_details)
+            elif eo.type == "keyword_coverage":
+                check_results["keyword_coverage"] = _check_keyword_coverage(
+                    eo.value, outcome,
+                )
+            elif eo.type == "state_check":
+                sc_score, sc_details = _check_state(eo.value, transcript)
+                check_results["state_check"] = sc_score
+                extra_details.update(sc_details)
 
         if not check_results:
             score = 1.0
@@ -272,3 +295,220 @@ def _check_numeric_range(value: dict[str, Any], outcome: str) -> float:
             return 1.0
 
     return 0.0
+
+
+# ---------------------------------------------------------------------------
+# Agent-type-specific checks
+# ---------------------------------------------------------------------------
+
+
+def _extract_code_blocks(outcome: str) -> list[str]:
+    """Extract code from markdown fenced blocks or return full outcome."""
+    blocks = re.findall(r"```(?:\w*)\n(.*?)```", outcome, re.DOTALL)
+    return blocks if blocks else [outcome]
+
+
+def _check_code_valid(
+    value: dict[str, Any], outcome: str,
+) -> tuple[float, dict[str, Any]]:
+    """Check that code in the outcome is syntactically valid.
+
+    Coding-agent check.  Currently supports Python via ``ast.parse()``.
+    value: {"language": "python"} (default: python).
+    """
+    language = value.get("language", "python") if isinstance(value, dict) else "python"
+    blocks = _extract_code_blocks(outcome)
+
+    if language != "python":
+        return 0.0, {"error": f"unsupported language: {language}"}
+
+    errors: list[str] = []
+    for block in blocks:
+        try:
+            ast.parse(block)
+        except SyntaxError as exc:
+            errors.append(f"line {exc.lineno}: {exc.msg}")
+
+    if not errors:
+        return 1.0, {}
+    return 0.0, {"syntax_errors": errors}
+
+
+def _check_test_results(
+    value: dict[str, Any], transcript: Transcript,
+) -> tuple[float, dict[str, Any]]:
+    """Verify test outcomes from transcript events.
+
+    Coding-agent check.  Looks for ``event_type == "test_result"`` events
+    with ``data.passed`` (bool) and ``data.test_name`` (str).
+
+    value formats:
+    - {"expected_tests": ["test_a", "test_b"]}  -> fraction of listed tests that passed
+    - {"min_pass_rate": 0.9}                     -> 1.0 if pass-rate >= threshold, else 0.0
+    """
+    test_events = [
+        ev for ev in transcript.events if ev.event_type == "test_result"
+    ]
+
+    if not test_events:
+        return 0.0, {"error": "no test_result events in transcript"}
+
+    expected_tests = value.get("expected_tests")
+    min_pass_rate = value.get("min_pass_rate")
+
+    if expected_tests:
+        results_map = {
+            ev.data.get("test_name", ""): ev.data.get("passed", False)
+            for ev in test_events
+        }
+        matched = sum(1 for t in expected_tests if results_map.get(t))
+        score = matched / len(expected_tests)
+        details: dict[str, Any] = {
+            "expected_tests": expected_tests,
+            "passed_tests": [t for t in expected_tests if results_map.get(t)],
+            "failed_tests": [t for t in expected_tests if not results_map.get(t)],
+        }
+        return score, details
+
+    # min_pass_rate mode
+    total = len(test_events)
+    passed = sum(1 for ev in test_events if ev.data.get("passed"))
+    rate = passed / total
+    threshold = min_pass_rate if min_pass_rate is not None else 1.0
+    score = 1.0 if rate >= threshold else 0.0
+    return score, {"pass_rate": rate, "threshold": threshold, "total": total, "passed": passed}
+
+
+# Regex patterns for detecting citations in text
+_CITATION_PATTERNS = [
+    re.compile(r"https?://\S+"),                          # URLs
+    re.compile(r"\b10\.\d{4,}/\S+"),                      # DOIs
+    re.compile(r"\[\d+\]"),                                # Numbered refs [1]
+    re.compile(r"[A-Z][a-z]+\s+et\s+al\.?,?\s*\(?\d{4}"), # Author et al., 2023
+]
+
+
+def _find_citations(text: str) -> list[str]:
+    """Return all citation-like strings found in text."""
+    found: list[str] = []
+    for pat in _CITATION_PATTERNS:
+        found.extend(pat.findall(text))
+    return found
+
+
+def _check_groundedness(
+    value: dict[str, Any], outcome: str,
+) -> tuple[float, dict[str, Any]]:
+    """Check that the outcome contains citations or references.
+
+    Research-agent check.
+
+    value formats:
+    - {"required_sources": ["url_or_doi", ...]}  -> fraction of sources found
+    - {"min_citations": 3}                       -> 1.0 if >= N citations detected
+    """
+    required = value.get("required_sources")
+    min_cit = value.get("min_citations")
+
+    detected = _find_citations(outcome)
+
+    if required:
+        outcome_lower = outcome.lower()
+        matched = sum(1 for src in required if src.lower() in outcome_lower)
+        return matched / len(required), {
+            "required_sources": required,
+            "matched_count": matched,
+            "detected_citations": detected,
+        }
+
+    if min_cit is not None:
+        n = len(detected)
+        score = 1.0 if n >= min_cit else 0.0
+        return score, {
+            "min_citations": min_cit,
+            "detected_count": n,
+            "detected_citations": detected,
+        }
+
+    # Default: just report whether any citations exist
+    return (1.0 if detected else 0.0), {"detected_citations": detected}
+
+
+def _check_keyword_coverage(
+    value: dict[str, Any], outcome: str,
+) -> float:
+    """Check that required keywords/topics are covered in the outcome.
+
+    Research-agent check.
+
+    value: {"keywords": ["topic1", "pattern2"], "match_mode": "substring"|"regex"}
+    Default match_mode: "substring" (case-insensitive).
+    """
+    keywords = value.get("keywords", [])
+    if not keywords:
+        return 1.0
+
+    mode = value.get("match_mode", "substring")
+    outcome_lower = outcome.lower()
+    matched = 0
+
+    for kw in keywords:
+        if mode == "regex":
+            if re.search(kw, outcome, re.IGNORECASE):
+                matched += 1
+        else:
+            if kw.lower() in outcome_lower:
+                matched += 1
+
+    return matched / len(keywords)
+
+
+def _resolve_nested(data: dict[str, Any], dotted_key: str) -> Any:
+    """Resolve a dot-notation key against a nested dict."""
+    parts = dotted_key.split(".")
+    current: Any = data
+    for part in parts:
+        if not isinstance(current, dict):
+            return None
+        current = current.get(part)
+    return current
+
+
+def _check_state(
+    value: dict[str, Any], transcript: Transcript,
+) -> tuple[float, dict[str, Any]]:
+    """Verify key-value assertions against the last state snapshot in the transcript.
+
+    Conversational / computer-use agent check.
+
+    value: {"assertions": {"key": "expected", "nested.key": "expected"}}
+    Looks for the last ``state_snapshot`` event in transcript.events.
+    Supports dot-notation for nested access.
+    """
+    assertions = value.get("assertions", {})
+    if not assertions:
+        return 1.0, {}
+
+    # Find the last state_snapshot event
+    state_events = [
+        ev for ev in transcript.events if ev.event_type == "state_snapshot"
+    ]
+    if not state_events:
+        return 0.0, {"error": "no state_snapshot events in transcript"}
+
+    state_data = state_events[-1].data
+    matched = 0
+    failed: list[dict[str, Any]] = []
+
+    for key, expected in assertions.items():
+        actual = _resolve_nested(state_data, key)
+        if actual == expected:
+            matched += 1
+        else:
+            failed.append({"key": key, "expected": expected, "actual": actual})
+
+    score = matched / len(assertions)
+    details: dict[str, Any] = {"total_assertions": len(assertions), "matched": matched}
+    if failed:
+        details["failed_assertions"] = failed
+    return score, details

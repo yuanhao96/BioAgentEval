@@ -1,20 +1,13 @@
-"""LLM-based rubric grader using OpenAI GPT-4o."""
+"""LLM-based rubric grader supporting OpenAI and Anthropic providers."""
 from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
-from openai import OpenAI
-
-from bioagenteval.graders.base import BaseGrader
+from bioagenteval.graders.base import BaseGrader, format_expected_output
+from bioagenteval.graders.llm_client import LLMClient, create_llm_client
 from bioagenteval.models import GradeResult, GraderConfig, Task, Transcript
-
-# Load .env from project root (parent of src/)
-_env_path = Path(__file__).resolve().parents[3] / ".env"
-load_dotenv(_env_path)
 
 logger = logging.getLogger(__name__)
 
@@ -35,19 +28,14 @@ Question: {question}
 {metrics_section}
 ## Instructions
 Score the response from 0.0 to 1.0 based on the rubric above.
+
+If you cannot determine a score because the information is insufficient or \
+the response is too ambiguous to evaluate fairly, you may return an "unknown" \
+verdict instead of guessing.
+
 Respond ONLY with valid JSON (no markdown fences):
-{{"score": <float 0.0-1.0>, "passed": <bool>, "reasoning": "<brief explanation>"}}
+{{"score": <float 0.0-1.0>, "passed": <bool>, "verdict": "pass"|"fail"|"unknown", "reasoning": "<brief explanation>"}}
 """
-
-
-def _format_expected_output(task: Task) -> str:
-    """Format expected_output items for the grading prompt."""
-    if not task.expected_output:
-        return "N/A"
-    parts = []
-    for eo in task.expected_output:
-        parts.append(f"- Type: {eo.type}, Value: {eo.value}")
-    return "\n".join(parts)
 
 
 def _format_metrics(metrics: dict[str, Any] | None) -> str:
@@ -61,11 +49,22 @@ def _format_metrics(metrics: dict[str, Any] | None) -> str:
 
 
 class ModelGrader(BaseGrader):
-    """LLM-based grader that scores responses against a rubric."""
+    """LLM-based grader that scores responses against a rubric.
 
-    def __init__(self, model: str = "gpt-4o"):
+    Supports both OpenAI and Anthropic providers via the LLMClient abstraction.
+    """
+
+    def __init__(
+        self,
+        client: LLMClient | None = None,
+        provider: str = "openai",
+        model: str = "",
+    ):
+        if client is not None:
+            self.client = client
+        else:
+            self.client = create_llm_client(provider)
         self.model = model
-        self.client = OpenAI()
 
     def grade(
         self,
@@ -77,20 +76,34 @@ class ModelGrader(BaseGrader):
     ) -> GradeResult:
         prompt = GRADING_PROMPT.format(
             question=task.question,
-            expected_output_section=_format_expected_output(task),
+            expected_output_section=format_expected_output(task),
             outcome=outcome,
             rubric=config.rubric or "Is the response accurate and complete?",
             metrics_section=_format_metrics(metrics),
         )
 
+        model = config.params.get("model", self.model)
+
         try:
-            response = self.client.chat.completions.create(
-                model=config.params.get("model", self.model),
-                max_tokens=256,
+            raw = self.client.complete(
                 messages=[{"role": "user", "content": prompt}],
+                model=model,
+                max_tokens=256,
             )
-            raw = response.choices[0].message.content
             parsed = json.loads(raw)
+
+            verdict = parsed.get("verdict", "")
+            if verdict == "unknown":
+                return GradeResult(
+                    grader_type="model",
+                    score=0.0,
+                    passed=False,
+                    details={
+                        "status": "unknown",
+                        "reasoning": parsed.get("reasoning", ""),
+                    },
+                )
+
             return GradeResult(
                 grader_type="model",
                 score=float(parsed["score"]),

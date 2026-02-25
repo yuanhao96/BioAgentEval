@@ -6,7 +6,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
-from bioagenteval.harness import AgentHarness
+from bioagenteval.harness import AgentHarness, TrialHook
 from bioagenteval.metrics import compute_metrics
 from bioagenteval.models import EvalResult, GradeResult, Task, Transcript, TrialResult
 
@@ -22,11 +22,15 @@ class EvalRunner:
         graders: dict[str, Any],
         max_concurrency: int = 1,
         max_retries: int = 0,
+        hooks: list[TrialHook] | None = None,
+        default_timeout: float | None = None,
     ):
         self.agent = agent
         self.graders = graders
         self.max_concurrency = max_concurrency
         self.max_retries = max_retries
+        self.hooks: list[TrialHook] = hooks or []
+        self.default_timeout = default_timeout
 
     def run_suite(self, tasks: list[Task]) -> list[EvalResult]:
         if self.max_concurrency <= 1:
@@ -67,9 +71,22 @@ class EvalRunner:
     def _run_trial(self, task: Task, trial_num: int) -> TrialResult:
         self.agent.reset()
 
+        # Run setup hooks
+        for hook in self.hooks:
+            try:
+                hook.setup(task)
+            except Exception as e:
+                logger.warning("Hook setup failed for task %s: %s", task.id, e)
+
+        # Determine timeout (per-task overrides runner default)
+        timeout = task.metadata.get("timeout", self.default_timeout)
+
         start = time.perf_counter()
         try:
-            response = self.agent.run(task.question)
+            if timeout is not None:
+                response = self._run_with_timeout(task.question, timeout)
+            else:
+                response = self.agent.run(task.question)
             duration_ms = (time.perf_counter() - start) * 1000
             outcome = response.outcome
             transcript = response.transcript
@@ -104,7 +121,7 @@ class EvalRunner:
                 grade.passed = not grade.passed
                 grade.score = 1.0 - grade.score
 
-        return TrialResult(
+        trial_result = TrialResult(
             task_id=task.id,
             trial_num=trial_num,
             outcome=outcome,
@@ -114,6 +131,26 @@ class EvalRunner:
             error=error,
             metrics=trial_metrics,
         )
+
+        # Run teardown hooks
+        for hook in self.hooks:
+            try:
+                hook.teardown(task, trial_result)
+            except Exception as e:
+                logger.warning("Hook teardown failed for task %s: %s", task.id, e)
+
+        return trial_result
+
+    def _run_with_timeout(self, question: str, timeout: float):
+        """Run agent with a timeout (in seconds)."""
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(self.agent.run, question)
+            try:
+                return future.result(timeout=timeout)
+            except Exception:
+                raise TimeoutError(
+                    f"Trial timed out after {timeout}s"
+                )
 
     def _grade_with_retry(
         self, grader, task, outcome, transcript, config, metrics,

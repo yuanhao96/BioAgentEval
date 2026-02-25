@@ -4,7 +4,10 @@ from pathlib import Path
 
 import click
 
-from bioagenteval.graders import CodeGrader, HumanGrader, ModelGrader
+from bioagenteval.graders import (
+    CodeGrader, ConsensusGrader, HumanGrader, ModelGrader, PairwiseGrader,
+    create_llm_client,
+)
 from bioagenteval.loader import filter_tasks_by_tags, load_suite
 from bioagenteval.reporter import EvalReporter
 from bioagenteval.runner import EvalRunner
@@ -34,8 +37,9 @@ def _parse_tags(tag_strings: tuple[str, ...]) -> dict[str, str]:
 @click.option("--agent", "-a", required=True, help="Agent module path, e.g. bioagenteval.agents.baseline_qa:BaselineQAAgent")
 @click.option("--output", "-o", default="eval_report.json", help="Output JSON path.")
 @click.option("--skip-model-grader", is_flag=True, help="Skip model-based grading.")
+@click.option("--provider", "-p", default="openai", type=click.Choice(["openai", "anthropic"]), help="LLM provider for model grading.")
 @click.option("--tags", "-t", multiple=True, help="Filter tasks by tag (key=value). Repeatable.")
-def run(suite_path, agent, output, skip_model_grader, tags):
+def run(suite_path, agent, output, skip_model_grader, provider, tags):
     """Run an evaluation suite against an agent."""
     # Load suite
     suite, tasks = load_suite(suite_path)
@@ -54,7 +58,12 @@ def run(suite_path, agent, output, skip_model_grader, tags):
     # Set up graders
     graders = {"code": CodeGrader()}
     if not skip_model_grader:
-        graders["model"] = ModelGrader()
+        client = create_llm_client(provider)
+        graders["model"] = ModelGrader(client=client)
+        graders["pairwise"] = PairwiseGrader(client=client)
+        graders["consensus"] = ConsensusGrader(
+            inner_grader=ModelGrader(client=client),
+        )
     graders["human"] = HumanGrader()
 
     # Run
@@ -136,6 +145,62 @@ def diff(report_a, report_b):
     delta = ob - oa
     sign = "+" if delta > 0 else ""
     click.echo(f"{'Overall pass@1':<40} {oa:>9.2%} {ob:>10.2%} {sign}{delta:>9.2%}")
+
+
+@cli.command()
+@click.argument("suite_path", type=click.Path(exists=True))
+@click.argument("report_path", type=click.Path(exists=True))
+def promote(suite_path, report_path):
+    """Promote a saturated capability suite to regression."""
+    from bioagenteval.suite_manager import promote_suite
+
+    result = promote_suite(suite_path, report_path)
+    if result["promoted"]:
+        click.echo(f"Promoted: {result['reason']}")
+    else:
+        click.echo(f"Not promoted: {result['reason']}")
+
+
+@cli.command("generate-task")
+@click.argument("report_path", type=click.Path(exists=True))
+@click.argument("output_path", type=click.Path())
+def generate_task(report_path, output_path):
+    """Generate task stubs from failed tasks in a report."""
+    from bioagenteval.suite_manager import generate_tasks_from_failures
+
+    result = generate_tasks_from_failures(report_path, output_path)
+    if result["generated"] == 0:
+        click.echo("No failed tasks found — nothing to generate.")
+    else:
+        click.echo(f"Generated {result['generated']} task stubs: {result['output_path']}")
+        for tid in result["task_ids"]:
+            click.echo(f"  - {tid}")
+
+
+@cli.command("check-balance")
+@click.argument("suite_path", type=click.Path(exists=True))
+def check_balance(suite_path):
+    """Check tag distribution balance in a suite."""
+    import yaml as _yaml
+
+    from bioagenteval.suite_manager import check_suite_balance
+
+    with open(suite_path) as f:
+        raw = _yaml.safe_load(f)
+
+    tasks = raw.get("tasks", [])
+    result = check_suite_balance(tasks)
+
+    click.echo(f"Tasks: {len(tasks)}")
+    for key, dist in result["tag_distributions"].items():
+        click.echo(f"  {key}: {dist}")
+
+    if result["balanced"]:
+        click.echo("Suite is balanced.")
+    else:
+        click.echo(f"Warnings ({len(result['warnings'])}):")
+        for w in result["warnings"]:
+            click.echo(f"  - {w}")
 
 
 if __name__ == "__main__":
