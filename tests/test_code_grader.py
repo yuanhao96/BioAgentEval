@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from bioagenteval.graders.base import BaseGrader
 from bioagenteval.graders.code_grader import CodeGrader
@@ -228,6 +230,152 @@ class TestNumericRange:
         )
         assert result.passed is False
         assert result.score == 0.0
+
+
+class TestJsonSchema:
+    SIMPLE_SCHEMA = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "age": {"type": "integer"},
+        },
+        "required": ["name"],
+    }
+
+    def make_task(self, schema):
+        return Task(
+            id="t1",
+            question="Return a JSON object.",
+            expected_output=[ExpectedOutput(type="json_schema", value=schema)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def test_valid_json_matching_schema(self):
+        task = self.make_task(self.SIMPLE_SCHEMA)
+        outcome = json.dumps({"name": "Alice", "age": 30})
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.passed is True
+        assert result.score == 1.0
+        assert "validation_errors" not in result.details
+        assert "parse_error" not in result.details
+
+    def test_schema_violation(self):
+        task = self.make_task(self.SIMPLE_SCHEMA)
+        outcome = json.dumps({"age": 30})  # missing required "name"
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.passed is False
+        assert result.score == 0.0
+        assert "validation_errors" in result.details
+        assert any("'name' is a required property" in e for e in result.details["validation_errors"])
+
+    def test_multiple_validation_errors(self):
+        schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"},
+            },
+            "required": ["name", "age"],
+        }
+        task = self.make_task(schema)
+        outcome = json.dumps({})  # missing both required fields
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.passed is False
+        assert len(result.details["validation_errors"]) == 2
+
+    def test_malformed_json(self):
+        task = self.make_task(self.SIMPLE_SCHEMA)
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "not json at all", Transcript(task_id="t1"), config)
+        assert result.passed is False
+        assert result.score == 0.0
+        assert "parse_error" in result.details
+
+    def test_empty_string(self):
+        task = self.make_task(self.SIMPLE_SCHEMA)
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "", Transcript(task_id="t1"), config)
+        assert result.passed is False
+        assert result.score == 0.0
+        assert "parse_error" in result.details
+
+    def test_wrong_type(self):
+        task = self.make_task(self.SIMPLE_SCHEMA)
+        outcome = json.dumps({"name": 123})  # name should be string
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.passed is False
+        assert "validation_errors" in result.details
+
+    def test_nested_schema(self):
+        schema = {
+            "type": "object",
+            "properties": {
+                "gene": {
+                    "type": "object",
+                    "properties": {
+                        "symbol": {"type": "string"},
+                        "organism": {"type": "string"},
+                    },
+                    "required": ["symbol"],
+                },
+            },
+            "required": ["gene"],
+        }
+        task = self.make_task(schema)
+        outcome = json.dumps({"gene": {"symbol": "TP53", "organism": "human"}})
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.passed is True
+        assert result.score == 1.0
+
+    def test_invalid_schema(self):
+        task = self.make_task({"type": "not_a_real_type"})
+        outcome = json.dumps({"a": 1})
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.passed is False
+        assert result.score == 0.0
+        assert "schema_error" in result.details
+
+    def test_combined_with_entities(self):
+        task = Task(
+            id="t1",
+            question="Return JSON with gene info.",
+            expected_output=[
+                ExpectedOutput(type="entities", value=["TP53"]),
+                ExpectedOutput(type="json_schema", value={
+                    "type": "object",
+                    "properties": {"gene": {"type": "string"}},
+                    "required": ["gene"],
+                }),
+            ],
+            graders=[GraderConfig(type="code")],
+        )
+        outcome = json.dumps({"gene": "TP53"})
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        # entities: "TP53" is in the outcome string '{"gene": "TP53"}' → 1.0
+        # json_schema: valid → 1.0
+        # average = 1.0
+        assert result.passed is True
+        assert result.score == 1.0
+
+    def test_array_schema(self):
+        schema = {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 1,
+        }
+        task = self.make_task(schema)
+        outcome = json.dumps(["gene1", "gene2"])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, outcome, Transcript(task_id="t1"), config)
+        assert result.passed is True
+        assert result.score == 1.0
 
 
 class TestNoExpectedOutput:

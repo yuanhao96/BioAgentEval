@@ -72,13 +72,38 @@ tasks:
         rubric: "Is the answer accurate and complete?"
 ```
 
-Supported types: `entities`, `cypher_patterns`, `mcq_answer`, `numeric_range`.
+Supported types: `entities`, `cypher_patterns`, `mcq_answer`, `numeric_range`, `json_schema`.
+
+#### JSON Schema validation
+
+Use `json_schema` to validate that an agent's response is valid JSON conforming to a schema:
+
+```yaml
+  - id: gene_structured_output
+    question: "Return a JSON object describing the TP53 gene."
+    expected_output:
+      - type: json_schema
+        value:
+          type: object
+          properties:
+            symbol:
+              type: string
+            name:
+              type: string
+          required:
+            - symbol
+            - name
+    graders:
+      - type: code
+```
+
+The grader parses the agent's outcome as JSON, validates it against the schema (JSON Schema Draft 7), and returns score 1.0 if valid or 0.0 with specific validation errors in `GradeResult.details`.
 
 ### Graders
 
 | Type | What it does | API key needed |
 |------|-------------|----------------|
-| `code` | Deterministic checks dispatched by `expected_output` type: entity presence, Cypher pattern matching, MCQ answer, numeric range | No |
+| `code` | Deterministic checks dispatched by `expected_output` type: entity presence, Cypher pattern matching, MCQ answer, numeric range, JSON Schema validation | No |
 | `model` | LLM-based rubric scoring (includes expected output and execution metrics in prompt) | `OPENAI_API_KEY` |
 | `human` | Stub that flags results for manual review | No |
 
@@ -112,7 +137,7 @@ tasks/
   hle_bio_chem.yaml    # HLE Bio/Chem 149-task suite
 scripts/
   convert_hle_bio_chem.py  # Dataset converter (emits v2 format)
-tests/                 # 108 tests (all mocked, no API calls)
+tests/                 # 120 tests (all mocked, no API calls)
 ```
 
 ## Documentation
@@ -140,3 +165,4 @@ pytest -v
 - PyYAML >= 6.0
 - anthropic >= 0.66.0 (for model grading)
 - openai >= 1.0 (for baseline agent)
+- jsonschema >= 4.0 (for JSON Schema validation)

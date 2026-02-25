@@ -44,6 +44,28 @@ tasks:
       - type: code
     num_trials: 2
 
+  - id: gene_structured_output
+    question: "Return a JSON object describing the TP53 gene with fields: symbol (string), name (string), and organism (string)."
+    expected_output:
+      - type: json_schema
+        value:
+          type: object
+          properties:
+            symbol:
+              type: string
+            name:
+              type: string
+            organism:
+              type: string
+          required:
+            - symbol
+            - name
+    tags:
+      complexity: simple
+    graders:
+      - type: code
+    num_trials: 1
+
   - id: pathway_insulin_signaling
     question: "What are the key genes in the insulin signaling pathway?"
     expected_output:

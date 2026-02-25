@@ -53,7 +53,7 @@ Key design decisions:
 - **Three grader types**: `code` (deterministic checks), `model` (LLM-based rubric scoring), `human` (calibration). Configured via `GraderConfig`.
 - **pass@k** uses the unbiased combinatorial estimator (not naive sampling). Implemented in `EvalResult.pass_at_k()`.
 - **Transcripts** capture both generic events and Neo4j-specific artifacts (Cypher queries, results) for debugging agent trajectories.
-- **Tasks** carry typed `expected_output` items (entities, cypher_patterns, mcq_answer, numeric_range) and open `tags` for filtering/classification.
+- **Tasks** carry typed `expected_output` items (entities, cypher_patterns, mcq_answer, numeric_range, json_schema) and open `tags` for filtering/classification.
 
 ### Domain Context
 
@@ -65,6 +65,7 @@ The target agent answers biomedical questions over a Neo4j knowledge graph conta
 - `anthropic>=0.66.0` — For model-based grading and agent interaction
 - `click>=8.0` — CLI framework
 - `PyYAML>=6.0` — Task definition loading
+- `jsonschema>=4.0` — JSON Schema validation for `json_schema` expected output type
 - `pytest>=7.0`, `pytest-mock>=3.10` — Testing (dev only)
 
 ## Eval Design Principles (from Anthropic guide)

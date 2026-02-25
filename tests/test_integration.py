@@ -67,6 +67,21 @@ class StubAgent:
         pass
 
 
+class JsonStubAgent:
+    """Agent that returns a JSON response for json_schema grading tests."""
+    def __init__(self, response_json: str):
+        self._response = response_json
+
+    def run(self, question: str) -> AgentResponse:
+        return AgentResponse(
+            outcome=self._response,
+            transcript=Transcript(task_id="stub"),
+        )
+
+    def reset(self) -> None:
+        pass
+
+
 class TestIntegration:
     def test_full_pipeline(self, tmp_path):
         # 1. Write and load suite
@@ -99,6 +114,72 @@ class TestIntegration:
         assert report["summary"]["overall_pass_at_1"] == 1.0
         assert len(report["results"][0]["trials"]) == 2
         assert len(report["results"][1]["trials"]) == 1
+
+    def test_json_schema_pipeline(self, tmp_path):
+        """Test full pipeline with a json_schema expected output."""
+        yaml_str = """\
+name: json_schema_test
+tasks:
+  - id: gene_json
+    question: "Return a JSON object for TP53."
+    expected_output:
+      - type: json_schema
+        value:
+          type: object
+          properties:
+            symbol:
+              type: string
+            name:
+              type: string
+          required:
+            - symbol
+            - name
+    graders:
+      - type: code
+"""
+        f = tmp_path / "json_schema.yaml"
+        f.write_text(yaml_str)
+        suite, tasks = load_suite(f)
+        assert len(tasks) == 1
+        assert tasks[0].expected_output[0].type == "json_schema"
+
+        agent = JsonStubAgent(json.dumps({"symbol": "TP53", "name": "Tumor protein p53"}))
+        runner = EvalRunner(agent=agent, graders={"code": CodeGrader()})
+        results = runner.run_suite(tasks)
+
+        trial = results[0].trials[0]
+        assert trial.grades[0].passed is True
+        assert trial.grades[0].score == 1.0
+        assert "validation_errors" not in trial.grades[0].details
+
+    def test_json_schema_pipeline_failure(self, tmp_path):
+        """Test pipeline with invalid JSON response against schema."""
+        yaml_str = """\
+name: json_schema_fail
+tasks:
+  - id: gene_json_bad
+    question: "Return a JSON object for TP53."
+    expected_output:
+      - type: json_schema
+        value:
+          type: object
+          required:
+            - symbol
+    graders:
+      - type: code
+"""
+        f = tmp_path / "json_fail.yaml"
+        f.write_text(yaml_str)
+        _, tasks = load_suite(f)
+
+        agent = JsonStubAgent("This is not JSON at all")
+        runner = EvalRunner(agent=agent, graders={"code": CodeGrader()})
+        results = runner.run_suite(tasks)
+
+        trial = results[0].trials[0]
+        assert trial.grades[0].passed is False
+        assert trial.grades[0].score == 0.0
+        assert "parse_error" in trial.grades[0].details
 
     def test_partial_match_pipeline(self, tmp_path):
         """Test that partial entity matches produce fractional scores."""

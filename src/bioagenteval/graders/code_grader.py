@@ -1,8 +1,11 @@
 """Deterministic code-based grader: dispatches on expected_output types."""
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
+
+import jsonschema
 
 from bioagenteval.graders.base import BaseGrader
 from bioagenteval.models import (
@@ -27,6 +30,7 @@ class CodeGrader(BaseGrader):
             )
 
         check_results: dict[str, float] = {}
+        extra_details: dict[str, Any] = {}
         for eo in task.expected_output:
             if eo.type == "entities":
                 check_results["entities"] = _check_entities(eo.value, outcome)
@@ -40,17 +44,22 @@ class CodeGrader(BaseGrader):
                 check_results["numeric_range"] = _check_numeric_range(
                     eo.value, outcome,
                 )
+            elif eo.type == "json_schema":
+                js_score, js_details = _check_json_schema(eo.value, outcome)
+                check_results["json_schema"] = js_score
+                extra_details.update(js_details)
 
         if not check_results:
             score = 1.0
         else:
             score = sum(check_results.values()) / len(check_results)
 
+        details: dict[str, Any] = {**check_results, **extra_details}
         return GradeResult(
             grader_type="code",
             score=score,
             passed=score >= 0.5,
-            details=check_results,
+            details=details,
         )
 
 
@@ -105,6 +114,38 @@ def _check_mcq_answer(expected: str, outcome: str) -> float:
             return 1.0
 
     return 0.0
+
+
+def _check_json_schema(
+    schema: dict[str, Any], outcome: str,
+) -> tuple[float, dict[str, Any]]:
+    """Validate that the outcome is valid JSON conforming to a JSON schema.
+
+    Returns (score, details) where score is 1.0 if valid, 0.0 otherwise,
+    and details contains error information on failure.
+    """
+    try:
+        data = json.loads(outcome)
+    except (json.JSONDecodeError, TypeError) as exc:
+        return 0.0, {"parse_error": str(exc)}
+
+    try:
+        jsonschema.Draft7Validator.check_schema(schema)
+        validator = jsonschema.Draft7Validator(schema)
+    except jsonschema.SchemaError as exc:
+        return 0.0, {"schema_error": str(exc)}
+
+    try:
+        errors = list(validator.iter_errors(data))
+    except Exception as exc:
+        return 0.0, {"schema_error": str(exc)}
+
+    if not errors:
+        return 1.0, {}
+
+    return 0.0, {
+        "validation_errors": [e.message for e in errors],
+    }
 
 
 def _check_numeric_range(value: dict[str, Any], outcome: str) -> float:
