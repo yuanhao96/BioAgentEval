@@ -378,6 +378,213 @@ class TestJsonSchema:
         assert result.score == 1.0
 
 
+class TestToolCalls:
+    def _transcript_with_tools(self, tool_events):
+        events = []
+        for name, data in tool_events:
+            events.append(TranscriptEvent(
+                event_type="tool_call", event_name=name, data=data,
+            ))
+        return Transcript(task_id="t1", events=events)
+
+    def make_task(self, tool_calls):
+        return Task(
+            id="t1",
+            question="Query the graph.",
+            expected_output=[ExpectedOutput(type="tool_calls", value=tool_calls)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def test_all_tools_found(self):
+        task = self.make_task([{"tool_name": "cypher_query"}, {"tool_name": "search"}])
+        transcript = self._transcript_with_tools([
+            ("cypher_query", {}),
+            ("search", {}),
+        ])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 1.0
+        assert result.passed is True
+        assert "missing_tool_calls" not in result.details
+
+    def test_partial_tools_found(self):
+        task = self.make_task([{"tool_name": "cypher_query"}, {"tool_name": "fetch"}])
+        transcript = self._transcript_with_tools([("cypher_query", {})])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 0.5
+        assert "missing_tool_calls" in result.details
+        assert "fetch" in result.details["missing_tool_calls"]
+
+    def test_no_tools_found(self):
+        task = self.make_task([{"tool_name": "cypher_query"}])
+        transcript = Transcript(task_id="t1")
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 0.0
+        assert result.passed is False
+
+    def test_with_params_match(self):
+        task = self.make_task([{
+            "tool_name": "cypher_query",
+            "params": {"query": "MATCH (g:Gene) RETURN g"},
+        }])
+        transcript = self._transcript_with_tools([
+            ("cypher_query", {"query": "MATCH (g:Gene) RETURN g", "db": "neo4j"}),
+        ])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 1.0
+
+    def test_with_params_mismatch(self):
+        task = self.make_task([{
+            "tool_name": "cypher_query",
+            "params": {"query": "MATCH (g:Gene) RETURN g"},
+        }])
+        transcript = self._transcript_with_tools([
+            ("cypher_query", {"query": "MATCH (d:Disease) RETURN d"}),
+        ])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 0.0
+
+    def test_empty_expected(self):
+        task = self.make_task([])
+        transcript = Transcript(task_id="t1")
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 1.0
+
+    def test_tool_name_from_data(self):
+        """Tool name can come from event.data['tool_name'] if event_name is empty."""
+        task = self.make_task([{"tool_name": "search"}])
+        events = [TranscriptEvent(
+            event_type="tool_use", data={"tool_name": "search"},
+        )]
+        transcript = Transcript(task_id="t1", events=events)
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 1.0
+
+
+class TestTurnLimit:
+    def make_task(self, max_turns):
+        return Task(
+            id="t1",
+            question="Q?",
+            expected_output=[ExpectedOutput(type="turn_limit", value={"max_turns": max_turns})],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def _transcript_with_turns(self, n):
+        events = [TranscriptEvent(event_type="llm_call") for _ in range(n)]
+        return Transcript(task_id="t1", events=events)
+
+    def test_within_limit(self):
+        task = self.make_task(5)
+        transcript = self._transcript_with_turns(3)
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 1.0
+        assert result.passed is True
+        assert result.details["actual_turns"] == 3
+
+    def test_at_limit(self):
+        task = self.make_task(3)
+        transcript = self._transcript_with_turns(3)
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 1.0
+
+    def test_over_limit(self):
+        task = self.make_task(2)
+        transcript = self._transcript_with_turns(5)
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 0.0
+        assert result.passed is False
+        assert result.details["actual_turns"] == 5
+        assert result.details["max_turns"] == 2
+
+    def test_zero_turns(self):
+        task = self.make_task(5)
+        transcript = Transcript(task_id="t1")
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 1.0
+
+
+class TestTrajectoryPattern:
+    def make_task(self, patterns):
+        return Task(
+            id="t1",
+            question="Q?",
+            expected_output=[ExpectedOutput(type="trajectory_pattern", value=patterns)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def _transcript_with_events(self, event_types):
+        events = [TranscriptEvent(event_type=et) for et in event_types]
+        return Transcript(task_id="t1", events=events)
+
+    def test_all_patterns_match(self):
+        task = self.make_task(["llm_call", "tool_call", "llm_call"])
+        transcript = self._transcript_with_events([
+            "llm_call", "tool_call", "llm_call",
+        ])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 1.0
+
+    def test_partial_match(self):
+        task = self.make_task(["llm_call", "cypher_query", "tool_call"])
+        transcript = self._transcript_with_events(["llm_call", "cypher_query"])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == pytest.approx(2.0 / 3.0)
+
+    def test_no_match(self):
+        task = self.make_task(["cypher_query"])
+        transcript = self._transcript_with_events(["llm_call"])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 0.0
+
+    def test_order_matters(self):
+        task = self.make_task(["tool_call", "llm_call"])
+        transcript = self._transcript_with_events(["llm_call", "tool_call"])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        # "tool_call" doesn't appear before "llm_call" in "llm_call tool_call"
+        # Actually: event_sequence = "llm_call tool_call"
+        # Pattern "tool_call" matches at position 9, then "llm_call" needs to match
+        # after that — but there's no llm_call after tool_call, so only 1/2 match
+        assert result.score == 0.5
+
+    def test_regex_patterns(self):
+        task = self.make_task(["llm_.*", "tool_.*"])
+        transcript = self._transcript_with_events([
+            "llm_call", "tool_use",
+        ])
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 1.0
+
+    def test_empty_patterns(self):
+        task = self.make_task([])
+        transcript = Transcript(task_id="t1")
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 1.0
+
+    def test_empty_transcript(self):
+        task = self.make_task(["llm_call"])
+        transcript = Transcript(task_id="t1")
+        config = task.graders[0]
+        result = CodeGrader().grade(task, "result", transcript, config)
+        assert result.score == 0.0
+
+
 class TestNoExpectedOutput:
     def test_empty_expected_output(self):
         task = Task(

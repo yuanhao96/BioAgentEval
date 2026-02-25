@@ -13,7 +13,7 @@ class TestRegistry:
         expected = {
             "n_turns", "n_tool_calls", "n_total_tokens",
             "time_to_first_token", "output_tokens_per_sec",
-            "time_to_last_token",
+            "time_to_last_token", "estimated_cost",
         }
         assert expected.issubset(set(_REGISTRY.keys()))
 
@@ -171,6 +171,45 @@ class TestTimeToLastToken:
         transcript = Transcript(task_id="t1")
         fn = get_metric("time_to_last_token")
         assert fn(transcript, 1234.5) == 1234.5
+
+
+class TestEstimatedCost:
+    def test_cost_calculation(self):
+        transcript = Transcript(
+            task_id="t1",
+            events=[
+                TranscriptEvent(
+                    event_type="llm_call",
+                    data={"prompt_tokens": 1000, "completion_tokens": 500},
+                ),
+            ],
+        )
+        fn = get_metric("estimated_cost")
+        # 1000 * $3/1M + 500 * $15/1M = $0.003 + $0.0075 = $0.0105
+        assert fn(transcript, 1000.0) == pytest.approx(0.0105)
+
+    def test_no_tokens(self):
+        transcript = Transcript(task_id="t1")
+        fn = get_metric("estimated_cost")
+        assert fn(transcript, 0.0) == 0.0
+
+    def test_multiple_events(self):
+        transcript = Transcript(
+            task_id="t1",
+            events=[
+                TranscriptEvent(
+                    event_type="llm_call",
+                    data={"prompt_tokens": 500, "completion_tokens": 100},
+                ),
+                TranscriptEvent(
+                    event_type="llm_call",
+                    data={"prompt_tokens": 500, "completion_tokens": 100},
+                ),
+            ],
+        )
+        fn = get_metric("estimated_cost")
+        # (1000 * 3/1M) + (200 * 15/1M) = 0.003 + 0.003 = 0.006
+        assert fn(transcript, 1000.0) == pytest.approx(0.006)
 
 
 class TestComputeMetrics:

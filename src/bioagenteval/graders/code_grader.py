@@ -48,6 +48,18 @@ class CodeGrader(BaseGrader):
                 js_score, js_details = _check_json_schema(eo.value, outcome)
                 check_results["json_schema"] = js_score
                 extra_details.update(js_details)
+            elif eo.type == "tool_calls":
+                tc_score, tc_details = _check_tool_calls(eo.value, transcript)
+                check_results["tool_calls"] = tc_score
+                extra_details.update(tc_details)
+            elif eo.type == "turn_limit":
+                tl_score, tl_details = _check_turn_limit(eo.value, transcript)
+                check_results["turn_limit"] = tl_score
+                extra_details.update(tl_details)
+            elif eo.type == "trajectory_pattern":
+                check_results["trajectory_pattern"] = _check_trajectory_pattern(
+                    eo.value, transcript,
+                )
 
         if not check_results:
             score = 1.0
@@ -146,6 +158,92 @@ def _check_json_schema(
     return 0.0, {
         "validation_errors": [e.message for e in errors],
     }
+
+
+def _check_tool_calls(
+    expected_calls: list[dict[str, Any]], transcript: Transcript,
+) -> tuple[float, dict[str, Any]]:
+    """Verify that expected tool calls appear in the transcript.
+
+    Each expected call has 'tool_name' (required) and optional 'params' dict.
+    Returns (score, details) where score is fraction of expected calls matched.
+    """
+    if not expected_calls:
+        return 1.0, {}
+
+    tool_events = [
+        ev for ev in transcript.events
+        if ev.event_type in {"tool_call", "tool_use", "cypher_query"}
+    ]
+
+    matched = 0
+    missing: list[str] = []
+    for expected in expected_calls:
+        tool_name = expected.get("tool_name", "")
+        expected_params = expected.get("params", {})
+        found = False
+        for ev in tool_events:
+            ev_name = ev.event_name or ev.data.get("tool_name", "")
+            if ev_name != tool_name:
+                continue
+            if expected_params:
+                if all(ev.data.get(k) == v for k, v in expected_params.items()):
+                    found = True
+                    break
+            else:
+                found = True
+                break
+        if found:
+            matched += 1
+        else:
+            missing.append(tool_name)
+
+    score = matched / len(expected_calls)
+    details: dict[str, Any] = {}
+    if missing:
+        details["missing_tool_calls"] = missing
+    return score, details
+
+
+def _check_turn_limit(
+    value: dict[str, Any], transcript: Transcript,
+) -> tuple[float, dict[str, Any]]:
+    """Check if the number of LLM turns is within the allowed limit.
+
+    Returns (score, details) where score is 1.0 if within limit, 0.0 if exceeded.
+    """
+    max_turns = value.get("max_turns", 0)
+    actual_turns = sum(1 for ev in transcript.events if ev.event_type == "llm_call")
+    details = {"max_turns": max_turns, "actual_turns": actual_turns}
+    if actual_turns <= max_turns:
+        return 1.0, details
+    return 0.0, details
+
+
+def _check_trajectory_pattern(
+    patterns: list[str], transcript: Transcript,
+) -> float:
+    """Check that regex patterns match event_types in order.
+
+    Each pattern is matched against individual event_types, consuming events
+    in order. Returns fraction of patterns matched.
+    """
+    if not patterns:
+        return 1.0
+
+    event_types = [ev.event_type for ev in transcript.events]
+
+    matched = 0
+    event_idx = 0
+    for pat in patterns:
+        while event_idx < len(event_types):
+            if re.fullmatch(pat, event_types[event_idx]):
+                matched += 1
+                event_idx += 1
+                break
+            event_idx += 1
+
+    return matched / len(patterns)
 
 
 def _check_numeric_range(value: dict[str, Any], outcome: str) -> float:

@@ -11,6 +11,18 @@ from bioagenteval.models import (
 )
 
 
+def filter_tasks_by_tags(
+    tasks: list[Task], tag_filters: dict[str, str],
+) -> list[Task]:
+    """Filter tasks to those matching all tag key=value pairs."""
+    if not tag_filters:
+        return tasks
+    return [
+        t for t in tasks
+        if all(str(t.tags.get(k)) == v for k, v in tag_filters.items())
+    ]
+
+
 def load_suite(path: str | Path) -> tuple[EvalSuite, list[Task]]:
     """Load an evaluation suite from a YAML file.
 
@@ -68,6 +80,7 @@ def load_suite(path: str | Path) -> tuple[EvalSuite, list[Task]]:
     suite = EvalSuite(
         name=raw["name"],
         description=raw.get("description", ""),
+        eval_type=raw.get("eval_type", ""),
         task_ids=task_ids,
         default_num_trials=default_trials,
         default_tracked_metrics=default_tracked_metrics,

@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 
-from bioagenteval.loader import load_suite
+from bioagenteval.loader import filter_tasks_by_tags, load_suite
 from bioagenteval.models import EvalSuite, Task
 
 
@@ -169,3 +169,59 @@ tasks:
         cypher_eo = [eo for eo in tasks[0].expected_output if eo.type == "cypher_patterns"][0]
         assert cypher_eo.value == ["MATCH.*insulin"]
         assert tasks[0].tags["complexity"] == "complex"
+
+    def test_load_eval_type(self, tmp_path):
+        yaml_content = """\
+name: regression_suite
+eval_type: regression
+tasks:
+  - id: t1
+    question: "Q?"
+"""
+        f = tmp_path / "suite.yaml"
+        f.write_text(yaml_content)
+        suite, _ = load_suite(f)
+        assert suite.eval_type == "regression"
+
+    def test_load_no_eval_type(self, tmp_path):
+        f = tmp_path / "suite.yaml"
+        f.write_text(MINIMAL_YAML)
+        suite, _ = load_suite(f)
+        assert suite.eval_type == ""
+
+
+class TestFilterTasksByTags:
+    def test_filter_single_tag(self):
+        tasks = [
+            Task(id="t1", question="Q?", tags={"complexity": "simple"}),
+            Task(id="t2", question="Q?", tags={"complexity": "complex"}),
+            Task(id="t3", question="Q?", tags={"complexity": "simple"}),
+        ]
+        result = filter_tasks_by_tags(tasks, {"complexity": "simple"})
+        assert len(result) == 2
+        assert all(t.tags["complexity"] == "simple" for t in result)
+
+    def test_filter_multiple_tags(self):
+        tasks = [
+            Task(id="t1", question="Q?", tags={"complexity": "simple", "domain": "gene"}),
+            Task(id="t2", question="Q?", tags={"complexity": "simple", "domain": "pathway"}),
+            Task(id="t3", question="Q?", tags={"complexity": "complex", "domain": "gene"}),
+        ]
+        result = filter_tasks_by_tags(tasks, {"complexity": "simple", "domain": "gene"})
+        assert len(result) == 1
+        assert result[0].id == "t1"
+
+    def test_empty_filter(self):
+        tasks = [Task(id="t1", question="Q?", tags={"a": "b"})]
+        result = filter_tasks_by_tags(tasks, {})
+        assert len(result) == 1
+
+    def test_no_matches(self):
+        tasks = [Task(id="t1", question="Q?", tags={"a": "b"})]
+        result = filter_tasks_by_tags(tasks, {"a": "c"})
+        assert len(result) == 0
+
+    def test_missing_tag_key(self):
+        tasks = [Task(id="t1", question="Q?", tags={})]
+        result = filter_tasks_by_tags(tasks, {"complexity": "simple"})
+        assert len(result) == 0

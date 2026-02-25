@@ -169,6 +169,30 @@ class TestEvalRunner:
         assert trial.metrics["n_turns"] == 1
         assert trial.metrics["n_tool_calls"] == 0
 
+    def test_weight_propagated_from_config(self):
+        task = Task(
+            id="t1",
+            question="Q?",
+            graders=[
+                GraderConfig(type="code", weight=2.5),
+            ],
+            num_trials=1,
+        )
+        runner = EvalRunner(agent=FakeAgent(), graders={"code": FakeGrader()})
+        result = runner.run_task(task)
+        assert result.trials[0].grades[0].weight == 2.5
+
+    def test_default_weight_propagated(self):
+        task = Task(
+            id="t1",
+            question="Q?",
+            graders=[GraderConfig(type="code")],
+            num_trials=1,
+        )
+        runner = EvalRunner(agent=FakeAgent(), graders={"code": FakeGrader()})
+        result = runner.run_task(task)
+        assert result.trials[0].grades[0].weight == 1.0
+
     def test_empty_tracked_metrics(self):
         task = Task(
             id="t1",
@@ -179,3 +203,87 @@ class TestEvalRunner:
         runner = EvalRunner(agent=FakeAgent(), graders={"code": FakeGrader()})
         result = runner.run_task(task)
         assert result.trials[0].metrics == {}
+
+    def test_should_fail_inverts_grades(self):
+        task = Task(
+            id="t1",
+            question="Q?",
+            graders=[GraderConfig(type="code")],
+            num_trials=1,
+            should_fail=True,
+        )
+        # FakeGrader returns score=1.0, passed=True
+        runner = EvalRunner(agent=FakeAgent(), graders={"code": FakeGrader()})
+        result = runner.run_task(task)
+        # Inverted: score=0.0, passed=False
+        assert result.trials[0].grades[0].score == 0.0
+        assert result.trials[0].grades[0].passed is False
+
+    def test_should_fail_inverts_failing_to_passing(self):
+        task = Task(
+            id="t1",
+            question="Q?",
+            graders=[GraderConfig(type="code")],
+            num_trials=1,
+            should_fail=True,
+        )
+        # FailingGrader returns score=0.0, passed=False
+        runner = EvalRunner(agent=FakeAgent(), graders={"code": FailingGrader()})
+        result = runner.run_task(task)
+        # Inverted: score=1.0, passed=True
+        assert result.trials[0].grades[0].score == 1.0
+        assert result.trials[0].grades[0].passed is True
+
+    def test_max_concurrency_parallel(self):
+        tasks = [
+            Task(id=f"t{i}", question="Q?", graders=[GraderConfig(type="code")], num_trials=1)
+            for i in range(5)
+        ]
+        runner = EvalRunner(
+            agent=FakeAgent(), graders={"code": FakeGrader()}, max_concurrency=3,
+        )
+        results = runner.run_suite(tasks)
+        assert len(results) == 5
+        # Order preserved
+        for i, r in enumerate(results):
+            assert r.task_id == f"t{i}"
+
+    def test_retry_on_grader_failure(self):
+        call_count = 0
+
+        class FailOnceGrader:
+            def grade(self, task, outcome, transcript, config, metrics=None):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    raise RuntimeError("API timeout")
+                return GradeResult(grader_type="code", score=1.0, passed=True)
+
+        task = Task(
+            id="t1", question="Q?",
+            graders=[GraderConfig(type="code")],
+            num_trials=1,
+        )
+        runner = EvalRunner(
+            agent=FakeAgent(), graders={"code": FailOnceGrader()}, max_retries=1,
+        )
+        result = runner.run_task(task)
+        assert result.trials[0].grades[0].passed is True
+        assert call_count == 2
+
+    def test_retry_exhausted(self):
+        class AlwaysFailGrader:
+            def grade(self, task, outcome, transcript, config, metrics=None):
+                raise RuntimeError("Permanent failure")
+
+        task = Task(
+            id="t1", question="Q?",
+            graders=[GraderConfig(type="code")],
+            num_trials=1,
+        )
+        runner = EvalRunner(
+            agent=FakeAgent(), graders={"code": AlwaysFailGrader()}, max_retries=1,
+        )
+        result = runner.run_task(task)
+        assert result.trials[0].grades[0].passed is False
+        assert "error" in result.trials[0].grades[0].details

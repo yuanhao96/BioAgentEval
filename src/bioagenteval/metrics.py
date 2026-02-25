@@ -93,3 +93,23 @@ def _output_tokens_per_sec(transcript: Transcript, duration_ms: float) -> float 
 def _time_to_last_token(transcript: Transcript, duration_ms: float) -> float:
     """Passthrough of duration_ms."""
     return duration_ms
+
+
+# Default pricing per token (USD) — GPT-4o-class models
+_DEFAULT_PROMPT_PRICE = 3.0 / 1_000_000      # $3 per 1M prompt tokens
+_DEFAULT_COMPLETION_PRICE = 15.0 / 1_000_000  # $15 per 1M completion tokens
+
+
+@register_metric("estimated_cost")
+def _estimated_cost(transcript: Transcript, duration_ms: float) -> float:
+    """Estimate cost in USD based on token counts and default pricing."""
+    prompt_tokens = sum(
+        ev.data.get("prompt_tokens", 0) for ev in transcript.events
+    )
+    completion_tokens = sum(
+        ev.data.get("completion_tokens", 0) for ev in transcript.events
+    )
+    return (
+        prompt_tokens * _DEFAULT_PROMPT_PRICE
+        + completion_tokens * _DEFAULT_COMPLETION_PRICE
+    )

@@ -52,8 +52,10 @@ EvalSuite (named group of tasks)
 Key design decisions:
 - **Three grader types**: `code` (deterministic checks), `model` (LLM-based rubric scoring), `human` (calibration). Configured via `GraderConfig`.
 - **pass@k** uses the unbiased combinatorial estimator (not naive sampling). Implemented in `EvalResult.pass_at_k()`.
+- **pass^k** (`pass_hat_k`) measures probability that ALL k trials pass — critical for consistency-sensitive agents. Uses `C(c,k)/C(n,k)`.
+- **Grader weights**: `GraderConfig.weight` propagates to `GradeResult.weight`; `TrialResult.weighted_score()` computes weighted average.
 - **Transcripts** capture both generic events and Neo4j-specific artifacts (Cypher queries, results) for debugging agent trajectories.
-- **Tasks** carry typed `expected_output` items (entities, cypher_patterns, mcq_answer, numeric_range, json_schema) and open `tags` for filtering/classification.
+- **Tasks** carry typed `expected_output` items (entities, cypher_patterns, mcq_answer, numeric_range, json_schema, tool_calls, turn_limit, trajectory_pattern) and open `tags` for filtering/classification.
 
 ### Domain Context
 

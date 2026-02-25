@@ -39,12 +39,14 @@ class Task(BaseModel):
     graders: list[GraderConfig] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     num_trials: int = 1
+    should_fail: bool = False
 
 
 class EvalSuite(BaseModel):
     """A named collection of tasks."""
     name: str
     description: str = ""
+    eval_type: str = ""  # "capability", "regression", or empty
     task_ids: list[str] = Field(default_factory=list)
     default_graders: list[GraderConfig] = Field(default_factory=list)
     default_num_trials: int = 1
@@ -74,6 +76,7 @@ class GradeResult(BaseModel):
     grader_type: str
     score: float
     passed: bool
+    weight: float = 1.0
     details: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -87,6 +90,19 @@ class TrialResult(BaseModel):
     duration_ms: float = 0.0
     error: str | None = None
     metrics: dict[str, Any] = Field(default_factory=dict)
+
+    def weighted_score(self) -> float:
+        """Weighted average of grade scores using each grade's weight."""
+        if not self.grades:
+            return 0.0
+        total_weight = sum(g.weight for g in self.grades)
+        if total_weight == 0:
+            return 0.0
+        return sum(g.score * g.weight for g in self.grades) / total_weight
+
+    def weighted_passed(self, threshold: float = 0.5) -> bool:
+        """Whether the weighted score meets the pass threshold."""
+        return self.weighted_score() >= threshold
 
 
 class EvalResult(BaseModel):
@@ -105,6 +121,58 @@ class EvalResult(BaseModel):
         if n - c < k:
             return 1.0
         return 1.0 - math.comb(n - c, k) / math.comb(n, k)
+
+    def pass_hat_k(self, k: int = 1) -> float:
+        """Unbiased estimator: probability that ALL k trials pass.
+
+        Measures consistency — critical for customer-facing agents.
+        Formula: C(c, k) / C(n, k) where c = passing trials, n = total.
+        """
+        n = len(self.trials)
+        if n == 0 or k <= 0:
+            return 0.0
+        c = sum(1 for t in self.trials if all(g.passed for g in t.grades))
+        if k > n:
+            k = n
+        if c < k:
+            return 0.0
+        return math.comb(c, k) / math.comb(n, k)
+
+    def convergence_check(
+        self, confidence: float = 0.95, width_threshold: float = 0.3,
+    ) -> dict[str, Any]:
+        """Check if the pass rate has converged using Wilson score interval.
+
+        Returns a dict with pass_rate, ci_lower, ci_upper, ci_width,
+        and converged (True if ci_width < width_threshold).
+        """
+        n = len(self.trials)
+        if n == 0:
+            return {
+                "pass_rate": 0.0, "ci_lower": 0.0, "ci_upper": 0.0,
+                "ci_width": 1.0, "converged": False, "n_trials": 0,
+            }
+        c = sum(1 for t in self.trials if all(g.passed for g in t.grades))
+        p = c / n
+
+        # Wilson score interval (normal approximation)
+        # z for 95% confidence = 1.96
+        z = 1.96 if confidence == 0.95 else 1.645
+        denom = 1 + z * z / n
+        center = (p + z * z / (2 * n)) / denom
+        spread = z * math.sqrt((p * (1 - p) + z * z / (4 * n)) / n) / denom
+        ci_lower = max(0.0, center - spread)
+        ci_upper = min(1.0, center + spread)
+        ci_width = ci_upper - ci_lower
+
+        return {
+            "pass_rate": p,
+            "ci_lower": round(ci_lower, 4),
+            "ci_upper": round(ci_upper, 4),
+            "ci_width": round(ci_width, 4),
+            "converged": ci_width < width_threshold,
+            "n_trials": n,
+        }
 
     def mean_score(self, grader_type: str) -> float:
         """Mean score across trials for a specific grader type."""

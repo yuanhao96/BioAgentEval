@@ -222,6 +222,193 @@ class TestEvalResult:
         assert er.mean_score("nonexistent") == 0.0
 
 
+class TestPassHatK:
+    def test_all_pass(self):
+        trials = [
+            TrialResult(
+                task_id="t1", trial_num=i, outcome="answer",
+                transcript=Transcript(task_id="t1"),
+                grades=[GradeResult(grader_type="code", score=1.0, passed=True)],
+                duration_ms=100.0,
+            )
+            for i in range(5)
+        ]
+        er = EvalResult(task_id="t1", trials=trials)
+        assert er.pass_hat_k(k=1) == 1.0
+        assert er.pass_hat_k(k=5) == 1.0
+
+    def test_none_pass(self):
+        trials = [
+            TrialResult(
+                task_id="t1", trial_num=i, outcome="answer",
+                transcript=Transcript(task_id="t1"),
+                grades=[GradeResult(grader_type="code", score=0.0, passed=False)],
+                duration_ms=100.0,
+            )
+            for i in range(3)
+        ]
+        er = EvalResult(task_id="t1", trials=trials)
+        assert er.pass_hat_k(k=1) == 0.0
+
+    def test_partial_pass(self):
+        # 2 out of 3 pass: pass^1 = C(2,1)/C(3,1) = 2/3
+        trials = [
+            TrialResult(
+                task_id="t1", trial_num=i, outcome="answer",
+                transcript=Transcript(task_id="t1"),
+                grades=[GradeResult(grader_type="code", score=s, passed=s >= 0.5)],
+                duration_ms=100.0,
+            )
+            for i, s in enumerate([1.0, 0.0, 1.0])
+        ]
+        er = EvalResult(task_id="t1", trials=trials)
+        assert er.pass_hat_k(k=1) == pytest.approx(2.0 / 3.0)
+        # pass^2 = C(2,2)/C(3,2) = 1/3
+        assert er.pass_hat_k(k=2) == pytest.approx(1.0 / 3.0)
+        # pass^3 = C(2,3)/C(3,3) = 0
+        assert er.pass_hat_k(k=3) == 0.0
+
+    def test_edge_cases(self):
+        er = EvalResult(task_id="t1", trials=[])
+        assert er.pass_hat_k(k=1) == 0.0
+        assert er.pass_hat_k(k=0) == 0.0
+
+    def test_k_greater_than_n(self):
+        trials = [
+            TrialResult(
+                task_id="t1", trial_num=0, outcome="answer",
+                transcript=Transcript(task_id="t1"),
+                grades=[GradeResult(grader_type="code", score=1.0, passed=True)],
+                duration_ms=100.0,
+            )
+        ]
+        er = EvalResult(task_id="t1", trials=trials)
+        # k=5 but n=1, clamps to k=1, c=1: C(1,1)/C(1,1) = 1.0
+        assert er.pass_hat_k(k=5) == 1.0
+
+
+class TestWeightedScore:
+    def test_uniform_weights(self):
+        trial = TrialResult(
+            task_id="t1", trial_num=0, outcome="answer",
+            transcript=Transcript(task_id="t1"),
+            grades=[
+                GradeResult(grader_type="code", score=1.0, passed=True, weight=1.0),
+                GradeResult(grader_type="model", score=0.5, passed=True, weight=1.0),
+            ],
+        )
+        assert trial.weighted_score() == pytest.approx(0.75)
+
+    def test_different_weights(self):
+        trial = TrialResult(
+            task_id="t1", trial_num=0, outcome="answer",
+            transcript=Transcript(task_id="t1"),
+            grades=[
+                GradeResult(grader_type="code", score=1.0, passed=True, weight=3.0),
+                GradeResult(grader_type="model", score=0.0, passed=False, weight=1.0),
+            ],
+        )
+        # (1.0*3 + 0.0*1) / (3+1) = 0.75
+        assert trial.weighted_score() == pytest.approx(0.75)
+
+    def test_empty_grades(self):
+        trial = TrialResult(
+            task_id="t1", trial_num=0, outcome="answer",
+            transcript=Transcript(task_id="t1"),
+        )
+        assert trial.weighted_score() == 0.0
+
+    def test_weighted_passed(self):
+        trial = TrialResult(
+            task_id="t1", trial_num=0, outcome="answer",
+            transcript=Transcript(task_id="t1"),
+            grades=[
+                GradeResult(grader_type="code", score=0.8, passed=True, weight=2.0),
+                GradeResult(grader_type="model", score=0.2, passed=False, weight=1.0),
+            ],
+        )
+        # (0.8*2 + 0.2*1) / 3 = 0.6
+        assert trial.weighted_passed(threshold=0.5) is True
+        assert trial.weighted_passed(threshold=0.7) is False
+
+    def test_default_weight_backward_compatible(self):
+        trial = TrialResult(
+            task_id="t1", trial_num=0, outcome="answer",
+            transcript=Transcript(task_id="t1"),
+            grades=[
+                GradeResult(grader_type="code", score=0.8, passed=True),
+                GradeResult(grader_type="model", score=0.6, passed=True),
+            ],
+        )
+        # Default weight=1.0, so (0.8+0.6)/2 = 0.7
+        assert trial.weighted_score() == pytest.approx(0.7)
+
+
+class TestConvergenceCheck:
+    def test_all_pass_converged(self):
+        trials = [
+            TrialResult(
+                task_id="t1", trial_num=i, outcome="answer",
+                transcript=Transcript(task_id="t1"),
+                grades=[GradeResult(grader_type="code", score=1.0, passed=True)],
+                duration_ms=100.0,
+            )
+            for i in range(10)
+        ]
+        er = EvalResult(task_id="t1", trials=trials)
+        conv = er.convergence_check()
+        assert conv["pass_rate"] == 1.0
+        assert conv["converged"] is True
+        assert conv["n_trials"] == 10
+
+    def test_mixed_results(self):
+        trials = [
+            TrialResult(
+                task_id="t1", trial_num=i, outcome="answer",
+                transcript=Transcript(task_id="t1"),
+                grades=[GradeResult(grader_type="code", score=s, passed=s >= 0.5)],
+                duration_ms=100.0,
+            )
+            for i, s in enumerate([1.0, 0.0, 1.0, 0.0, 1.0])
+        ]
+        er = EvalResult(task_id="t1", trials=trials)
+        conv = er.convergence_check()
+        assert conv["pass_rate"] == pytest.approx(0.6)
+        assert 0.0 <= conv["ci_lower"] <= conv["ci_upper"] <= 1.0
+        assert conv["ci_width"] > 0
+
+    def test_empty_trials(self):
+        er = EvalResult(task_id="t1", trials=[])
+        conv = er.convergence_check()
+        assert conv["converged"] is False
+        assert conv["n_trials"] == 0
+
+    def test_single_trial(self):
+        trials = [
+            TrialResult(
+                task_id="t1", trial_num=0, outcome="answer",
+                transcript=Transcript(task_id="t1"),
+                grades=[GradeResult(grader_type="code", score=1.0, passed=True)],
+                duration_ms=100.0,
+            )
+        ]
+        er = EvalResult(task_id="t1", trials=trials)
+        conv = er.convergence_check()
+        assert conv["n_trials"] == 1
+        # Wide CI with single trial
+        assert conv["ci_width"] > 0
+
+
+class TestShouldFail:
+    def test_should_fail_default(self):
+        t = Task(id="t1", question="Q?")
+        assert t.should_fail is False
+
+    def test_should_fail_set(self):
+        t = Task(id="t1", question="Q?", should_fail=True)
+        assert t.should_fail is True
+
+
 class TestAgentResponse:
     def test_agent_response(self):
         resp = AgentResponse(
@@ -241,6 +428,14 @@ class TestEvalSuite:
         )
         assert len(s.task_ids) == 2
         assert s.default_tracked_metrics == []
+
+    def test_suite_eval_type(self):
+        s = EvalSuite(name="core", eval_type="regression")
+        assert s.eval_type == "regression"
+
+    def test_suite_eval_type_default(self):
+        s = EvalSuite(name="core")
+        assert s.eval_type == ""
 
     def test_suite_with_default_tracked_metrics(self):
         s = EvalSuite(

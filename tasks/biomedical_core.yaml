@@ -66,6 +66,26 @@ tasks:
       - type: code
     num_trials: 1
 
+  - id: gene_query_trajectory
+    question: "Query the knowledge graph for TP53 gene details and return them."
+    expected_output:
+      - type: tool_calls
+        value:
+          - tool_name: cypher_query
+      - type: turn_limit
+        value:
+          max_turns: 5
+      - type: trajectory_pattern
+        value:
+          - "llm_call"
+          - "cypher_query"
+          - "llm_call"
+    tags:
+      complexity: simple
+    graders:
+      - type: code
+    num_trials: 1
+
   - id: pathway_insulin_signaling
     question: "What are the key genes in the insulin signaling pathway?"
     expected_output:
