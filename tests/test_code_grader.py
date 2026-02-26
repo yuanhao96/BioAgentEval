@@ -949,3 +949,242 @@ class TestStateCheck:
         config = task.graders[0]
         result = CodeGrader().grade(task, "done", transcript, config)
         assert result.score == 1.0
+
+
+# ---------------------------------------------------------------------------
+# Benchmark-specific grader checks
+# ---------------------------------------------------------------------------
+
+
+class TestExactMatch:
+    def make_task(self, value):
+        return Task(
+            id="t1", question="Q?",
+            expected_output=[ExpectedOutput(type="exact_match", value=value)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def test_exact_string_match(self):
+        task = self.make_task({"answer": "42"})
+        result = CodeGrader().grade(task, "42", Transcript(task_id="t1"), task.graders[0])
+        assert result.score == 1.0
+
+    def test_case_insensitive_default(self):
+        task = self.make_task({"answer": "Mitochondria"})
+        result = CodeGrader().grade(task, "mitochondria", Transcript(task_id="t1"), task.graders[0])
+        assert result.score == 1.0
+
+    def test_case_sensitive(self):
+        task = self.make_task({"answer": "ATP", "case_sensitive": True})
+        result = CodeGrader().grade(task, "atp", Transcript(task_id="t1"), task.graders[0])
+        assert result.score == 0.0
+
+    def test_whitespace_normalized(self):
+        task = self.make_task({"answer": "hello world"})
+        result = CodeGrader().grade(task, "  hello   world  ", Transcript(task_id="t1"), task.graders[0])
+        assert result.score == 1.0
+
+    def test_answer_prefix_match(self):
+        task = self.make_task({"answer": "B"})
+        result = CodeGrader().grade(task, "Answer: B", Transcript(task_id="t1"), task.graders[0])
+        assert result.score == 1.0
+
+    def test_no_match(self):
+        task = self.make_task({"answer": "42"})
+        result = CodeGrader().grade(task, "The answer is 43", Transcript(task_id="t1"), task.graders[0])
+        assert result.score == 0.0
+
+    def test_string_value_shorthand(self):
+        task = self.make_task("B")
+        result = CodeGrader().grade(task, "B", Transcript(task_id="t1"), task.graders[0])
+        assert result.score == 1.0
+
+
+class TestSetSimilarity:
+    def make_task(self, value):
+        return Task(
+            id="t1", question="Q?",
+            expected_output=[ExpectedOutput(type="set_similarity", value=value)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def test_perfect_match(self):
+        task = self.make_task({"expected": ["T cell", "B cell", "NK cell"]})
+        result = CodeGrader().grade(
+            task, "T cell, B cell, NK cell",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == pytest.approx(1.0)
+
+    def test_partial_overlap(self):
+        task = self.make_task({"expected": ["A", "B", "C"]})
+        result = CodeGrader().grade(
+            task, "A, B, D",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        # Jaccard: {a,b} / {a,b,c,d} = 2/4 = 0.5
+        assert result.score == pytest.approx(0.5)
+
+    def test_no_overlap(self):
+        task = self.make_task({"expected": ["X", "Y"]})
+        result = CodeGrader().grade(
+            task, "A, B",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == pytest.approx(0.0)
+
+    def test_case_insensitive(self):
+        task = self.make_task({"expected": ["Gene1", "Gene2"]})
+        result = CodeGrader().grade(
+            task, "gene1, gene2",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == pytest.approx(1.0)
+
+    def test_empty_expected(self):
+        task = self.make_task({"expected": []})
+        result = CodeGrader().grade(
+            task, "anything",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == 1.0
+
+    def test_newline_separator(self):
+        task = self.make_task({"expected": ["A", "B"], "separator": "\n"})
+        result = CodeGrader().grade(
+            task, "A\nB",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == pytest.approx(1.0)
+
+
+class TestPrecisionAtK:
+    def make_task(self, value):
+        return Task(
+            id="t1", question="Q?",
+            expected_output=[ExpectedOutput(type="precision_at_k", value=value)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def test_perfect_top_k(self):
+        task = self.make_task({"expected": ["TP53", "BRCA1", "EGFR"], "k": 3})
+        result = CodeGrader().grade(
+            task, "TP53, BRCA1, EGFR, MYC, KRAS",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == pytest.approx(1.0)
+
+    def test_partial_precision(self):
+        task = self.make_task({"expected": ["TP53", "BRCA1"], "k": 4})
+        result = CodeGrader().grade(
+            task, "TP53, MYC, BRCA1, KRAS",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        # 2 hits in top 4 = 0.5
+        assert result.score == pytest.approx(0.5)
+
+    def test_no_hits(self):
+        task = self.make_task({"expected": ["A", "B"], "k": 3})
+        result = CodeGrader().grade(
+            task, "X, Y, Z",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == pytest.approx(0.0)
+
+    def test_k_larger_than_output(self):
+        task = self.make_task({"expected": ["A", "B"], "k": 10})
+        result = CodeGrader().grade(
+            task, "A, B",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == pytest.approx(1.0)
+
+    def test_default_k_is_expected_length(self):
+        task = self.make_task({"expected": ["A", "B"]})
+        result = CodeGrader().grade(
+            task, "A, B, C",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        # k defaults to 2, top 2 = ["A", "B"], both hits
+        assert result.score == pytest.approx(1.0)
+
+    def test_empty_outcome(self):
+        task = self.make_task({"expected": ["A"], "k": 3})
+        result = CodeGrader().grade(
+            task, "",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == 0.0
+
+
+class TestNumericTolerance:
+    def make_task(self, value):
+        return Task(
+            id="t1", question="Q?",
+            expected_output=[ExpectedOutput(type="numeric_tolerance", value=value)],
+            graders=[GraderConfig(type="code")],
+        )
+
+    def test_within_abs_tolerance(self):
+        task = self.make_task({"expected": 0.85, "abs_tol": 0.05})
+        result = CodeGrader().grade(
+            task, "The AUROC is 0.83",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == 1.0
+
+    def test_outside_abs_tolerance(self):
+        task = self.make_task({"expected": 0.85, "abs_tol": 0.01})
+        result = CodeGrader().grade(
+            task, "The AUROC is 0.5",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == 0.0
+
+    def test_within_rel_tolerance(self):
+        task = self.make_task({"expected": 100.0, "rel_tol": 0.1})
+        result = CodeGrader().grade(
+            task, "Answer: 95",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == 1.0
+
+    def test_outside_rel_tolerance(self):
+        task = self.make_task({"expected": 100.0, "rel_tol": 0.01})
+        result = CodeGrader().grade(
+            task, "Answer: 50",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == 0.0
+
+    def test_exact_match(self):
+        task = self.make_task({"expected": 42.0, "abs_tol": 0.001})
+        result = CodeGrader().grade(
+            task, "42.0",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == 1.0
+
+    def test_no_numbers_in_outcome(self):
+        task = self.make_task({"expected": 1.0, "abs_tol": 0.1})
+        result = CodeGrader().grade(
+            task, "no numbers here",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == 0.0
+
+    def test_scientific_notation(self):
+        task = self.make_task({"expected": 1e-5, "rel_tol": 0.1})
+        result = CodeGrader().grade(
+            task, "The value is 1.05e-5",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == 1.0
+
+    def test_missing_expected(self):
+        task = self.make_task({"abs_tol": 0.1})
+        result = CodeGrader().grade(
+            task, "42",
+            Transcript(task_id="t1"), task.graders[0],
+        )
+        assert result.score == 0.0

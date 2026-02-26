@@ -1,0 +1,147 @@
+name: scbench
+description: >-
+  scBench benchmark — single-cell RNA sequencing analysis tasks. Agents must perform
+  standard scRNA-seq analysis workflows including preprocessing, cell type annotation,
+  trajectory inference, and batch correction. Tasks evaluate analytical accuracy
+  against known ground truth. Representative sample tasks for harness validation.
+eval_type: capability
+default_num_trials: 3
+default_graders:
+  - type: code
+  - type: model
+    rubric: >-
+      Evaluate the single-cell analysis for correctness and adherence to best practices.
+      Scoring: 1.0 = correct analysis with proper methodology, 0.5 = partially correct
+      or missing quality control steps, 0.0 = incorrect results or flawed approach.
+default_tracked_metrics:
+  - type: transcript
+    metrics:
+      - n_turns
+      - n_tool_calls
+  - type: latency
+    metrics:
+      - time_to_last_token
+
+tasks:
+  - id: sc_cell_type_annotation
+    question: >-
+      Annotate cell types in a single-cell RNA-seq dataset of human peripheral blood
+      mononuclear cells (PBMCs). The dataset contains 5,000 cells. Perform quality
+      control, normalization, clustering, and assign cell type labels based on
+      canonical marker genes. Report the cell types found and their proportions.
+    expected_output:
+      - type: set_similarity
+        value:
+          expected:
+            - CD4+ T cells
+            - CD8+ T cells
+            - B cells
+            - NK cells
+            - Monocytes
+            - Dendritic cells
+          separator: ","
+      - type: code_valid
+        value:
+          language: python
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The analysis should: (1) QC filtering (mitochondrial gene %, gene count
+          thresholds, doublet removal). (2) Normalization (scran or log-normalize).
+          (3) HVG selection, PCA, neighbor graph, UMAP. (4) Clustering (Leiden or
+          Louvain). (5) Cell type annotation using canonical markers (CD3D/CD4 for
+          CD4+ T cells, CD8A for CD8+ T cells, CD19/MS4A1 for B cells, NKG7 for
+          NK cells, CD14/LYZ for Monocytes). (6) Report proportions per cell type.
+
+          Scoring: 1.0 = all major PBMC types identified with correct markers.
+          0.5 = most types found but some misannotated or merged.
+          0.0 = incorrect annotation or no QC performed.
+    tags:
+      benchmark: scBench
+      category: CellTypeAnnotation
+      subject: Single-Cell Genomics
+      answer_type: structured_output
+      difficulty: medium
+
+  - id: sc_trajectory_inference
+    question: >-
+      Perform trajectory analysis on a single-cell RNA-seq dataset of hematopoietic
+      stem cell (HSC) differentiation. Identify the differentiation trajectory from
+      HSCs to mature cell types. Report the pseudotime ordering, branch points,
+      and the key transcription factors that change along the trajectory.
+    expected_output:
+      - type: set_similarity
+        value:
+          expected:
+            - HSC
+            - MPP
+            - CMP
+            - GMP
+            - Monocyte
+          separator: ","
+      - type: keyword_coverage
+        value:
+          keywords:
+            - pseudotime
+            - trajectory
+            - differentiation
+            - branch point
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The analysis should: (1) Preprocess data (QC, normalize, HVG, dimensionality
+          reduction). (2) Apply trajectory inference (Monocle3, PAGA, Slingshot, or
+          scVelo). (3) Set HSCs as root cells. (4) Compute pseudotime ordering.
+          (5) Identify branch points (lymphoid vs myeloid lineage). (6) Report
+          key TFs varying along pseudotime (GATA1, SPI1/PU.1, CEBPA).
+
+          Scoring: 1.0 = correct trajectory with branch points and TF dynamics.
+          0.5 = trajectory computed but wrong root or missing branch points.
+          0.0 = incorrect method or nonsensical ordering.
+    tags:
+      benchmark: scBench
+      category: TrajectoryInference
+      subject: Single-Cell Genomics
+      answer_type: structured_output
+      difficulty: hard
+
+  - id: sc_batch_correction
+    question: >-
+      Integrate three single-cell RNA-seq batches of mouse bone marrow samples
+      generated on different 10x Chromium platforms (v2 and v3 chemistry). Apply
+      batch correction and evaluate the integration quality. Report the batch-corrected
+      UMAP coordinates and the integration metrics (kBET acceptance rate, LISI score).
+    expected_output:
+      - type: numeric_tolerance
+        value:
+          expected: 0.8
+          abs_tol: 0.2
+      - type: keyword_coverage
+        value:
+          keywords:
+            - batch correction
+            - integration
+            - UMAP
+            - kBET
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The analysis should: (1) Identify batch-specific effects (different gene
+          detection rates, library sizes). (2) Apply a batch correction method
+          (Harmony, scVI, Scanorama, BBKNN, or MNN). (3) Verify cell types are
+          preserved across batches post-correction. (4) Quantify integration quality
+          using kBET acceptance rate and/or LISI score. (5) Visualize with batch-corrected
+          UMAP showing mixing of batches.
+
+          Scoring: 1.0 = proper integration with quality metrics showing good mixing.
+          0.5 = integration performed but no quality assessment.
+          0.0 = incorrect method or batch effects not addressed.
+    tags:
+      benchmark: scBench
+      category: BatchCorrection
+      subject: Single-Cell Genomics
+      answer_type: structured_output
+      difficulty: hard

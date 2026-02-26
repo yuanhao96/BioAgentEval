@@ -1,0 +1,241 @@
+name: frontierscience_bio
+description: >-
+  FrontierScience-Bio benchmark — expert-level biology questions at the frontier
+  of scientific knowledge. Includes Olympiad-style questions with definitive short
+  answers and Research-style questions requiring deeper reasoning about current
+  scientific understanding. Representative sample tasks for harness validation.
+eval_type: capability
+default_num_trials: 3
+default_graders:
+  - type: model
+    rubric: >-
+      Evaluate the agent's answer for scientific accuracy and completeness.
+      Scoring: 1.0 = correct and well-reasoned, 0.5 = partially correct or
+      missing key details, 0.0 = incorrect or irrelevant.
+default_tracked_metrics:
+  - type: transcript
+    metrics:
+      - n_turns
+      - n_tool_calls
+  - type: latency
+    metrics:
+      - time_to_last_token
+
+tasks:
+  # ── Olympiad-style tasks (short definitive answers) ──────────────────────
+
+  - id: fsb_olympiad_enzyme_kinetics
+    question: >-
+      An enzyme follows Michaelis-Menten kinetics with Km = 5 mM and Vmax = 100 µmol/min.
+      In the presence of a competitive inhibitor at concentration [I] = 10 mM and
+      Ki = 2 mM, what is the apparent Km (Km_app) in mM?
+    expected_output:
+      - type: exact_match
+        value:
+          answer: "30"
+          case_sensitive: false
+          strip_whitespace: true
+      - type: numeric_tolerance
+        value:
+          expected: 30
+          abs_tol: 0.5
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: 30 mM.
+
+          Rationale: For competitive inhibition, Km_app = Km × (1 + [I]/Ki) = 5 × (1 + 10/2) = 5 × 6 = 30 mM.
+          Vmax remains unchanged in competitive inhibition.
+
+          Scoring: 1.0 = correct answer (30 mM) with correct reasoning.
+          0.5 = correct formula but arithmetic error, or correct answer without explanation.
+          0.0 = incorrect answer or fundamental misunderstanding.
+    tags:
+      benchmark: FrontierScience-Bio
+      category: Olympiad
+      subject: Biochemistry
+      answer_type: short_answer
+      difficulty: medium
+
+  - id: fsb_olympiad_hardy_weinberg
+    question: >-
+      In a population in Hardy-Weinberg equilibrium, 16% of individuals show the
+      autosomal recessive phenotype. What percentage of the population are
+      heterozygous carriers? Give your answer as a whole number percentage.
+    expected_output:
+      - type: exact_match
+        value:
+          answer: "48"
+          case_sensitive: false
+          strip_whitespace: true
+      - type: numeric_tolerance
+        value:
+          expected: 48
+          abs_tol: 0.5
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: 48%.
+
+          Rationale: If q² = 0.16, then q = 0.4 and p = 0.6.
+          Heterozygous frequency = 2pq = 2 × 0.6 × 0.4 = 0.48 = 48%.
+
+          Scoring: 1.0 = correct answer (48%) with correct Hardy-Weinberg reasoning.
+          0.5 = correct approach but arithmetic error.
+          0.0 = incorrect answer or wrong genetic model.
+    tags:
+      benchmark: FrontierScience-Bio
+      category: Olympiad
+      subject: Genetics
+      answer_type: short_answer
+      difficulty: medium
+
+  - id: fsb_olympiad_membrane_potential
+    question: >-
+      Using the Nernst equation at 37°C (310 K), calculate the equilibrium potential
+      for potassium (K+) given intracellular [K+] = 140 mM and extracellular [K+] = 4 mM.
+      Use R = 8.314 J/(mol·K), F = 96485 C/mol, z = +1. Express your answer in millivolts,
+      rounded to the nearest whole number.
+    expected_output:
+      - type: numeric_tolerance
+        value:
+          expected: -96
+          abs_tol: 2
+      - type: exact_match
+        value:
+          answer: "-96"
+          case_sensitive: false
+          strip_whitespace: true
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: approximately -96 mV (values between -94 and -98 are acceptable).
+
+          Rationale: E = (RT/zF) × ln([K+]out/[K+]in) = (8.314 × 310)/(1 × 96485) × ln(4/140)
+          = 0.02671 × (-3.555) = -0.09496 V ≈ -95 to -96 mV.
+
+          Scoring: 1.0 = answer within ±2 mV of -96 mV with correct Nernst equation application.
+          0.5 = correct equation but significant arithmetic error, or answer in wrong units.
+          0.0 = incorrect equation or fundamentally wrong approach.
+    tags:
+      benchmark: FrontierScience-Bio
+      category: Olympiad
+      subject: Physiology
+      answer_type: short_answer
+      difficulty: medium
+
+  # ── Research-style tasks (deeper reasoning, free-form) ───────────────────
+
+  - id: fsb_research_crispr_off_target
+    question: >-
+      Describe the primary mechanisms by which CRISPR-Cas9 causes off-target effects
+      in mammalian cells, and explain at least two computational or experimental
+      strategies currently used to minimize these effects.
+    expected_output:
+      - type: keyword_coverage
+        value:
+          keywords:
+            - PAM
+            - mismatch
+            - guide RNA
+            - high-fidelity
+            - GUIDE-seq
+            - nickase
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The answer should cover: (1) Off-target mechanisms — Cas9 tolerates mismatches
+          between guide RNA and target DNA, especially at PAM-distal positions; non-canonical
+          PAM recognition; chromatin accessibility effects. (2) Mitigation strategies — at least
+          two of: high-fidelity Cas9 variants (eSpCas9, HiFi Cas9), truncated guide RNAs,
+          paired nickases (Cas9n), computational off-target prediction tools (Cas-OFFinder,
+          CRISPOR), experimental validation methods (GUIDE-seq, CIRCLE-seq, Digenome-seq).
+
+          Scoring: 1.0 = comprehensive coverage of mechanisms and ≥2 mitigation strategies.
+          0.5 = covers mechanisms OR strategies but not both adequately.
+          0.0 = superficial or incorrect answer.
+    tags:
+      benchmark: FrontierScience-Bio
+      category: Research
+      subject: Molecular Biology
+      answer_type: free_text
+      difficulty: hard
+
+  - id: fsb_research_single_cell_heterogeneity
+    question: >-
+      How has single-cell RNA sequencing (scRNA-seq) changed our understanding of
+      tumor heterogeneity compared to bulk RNA-seq? Discuss the biological insights
+      gained and at least one major technical limitation of current scRNA-seq approaches.
+    expected_output:
+      - type: keyword_coverage
+        value:
+          keywords:
+            - heterogeneity
+            - cell type
+            - subpopulation
+            - dropout
+            - batch effect
+            - microenvironment
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The answer should address: (1) How scRNA-seq reveals tumor heterogeneity that bulk
+          RNA-seq masks — distinct cell subpopulations, rare cell types, tumor microenvironment
+          composition, clonal evolution, drug resistance mechanisms at single-cell resolution.
+          (2) Technical limitations — at least one of: dropout events/zero inflation, 3' bias,
+          high cost per cell, batch effects, computational challenges with large datasets,
+          loss of spatial information (compared to spatial transcriptomics).
+
+          Scoring: 1.0 = clear explanation of scRNA-seq advantages for heterogeneity analysis
+          plus ≥1 technical limitation with biological context.
+          0.5 = discusses advantages OR limitations but not both.
+          0.0 = incorrect or superficial answer without biological insight.
+    tags:
+      benchmark: FrontierScience-Bio
+      category: Research
+      subject: Genomics
+      answer_type: free_text
+      difficulty: hard
+
+  - id: fsb_research_protein_structure_prediction
+    question: >-
+      Explain how AlphaFold2 uses multiple sequence alignments (MSAs) and structural
+      templates to predict protein structure. What are the key architectural innovations
+      in AlphaFold2 compared to earlier approaches, and what types of proteins remain
+      challenging for it to predict accurately?
+    expected_output:
+      - type: keyword_coverage
+        value:
+          keywords:
+            - MSA
+            - attention
+            - evoformer
+            - co-evolution
+            - structure module
+            - intrinsically disordered
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The answer should cover: (1) AlphaFold2 architecture — Evoformer blocks processing
+          MSA representations and pair representations with attention mechanisms, iterative
+          recycling, structure module converting representations to 3D coordinates. (2) Key
+          innovations vs earlier methods — end-to-end differentiable, attention over evolutionary
+          relationships, SE(3)-equivariant structure module. (3) Challenging cases — at least
+          one of: intrinsically disordered proteins, proteins with few homologs, large multimeric
+          complexes, membrane proteins, conformational flexibility, proteins requiring ligand context.
+
+          Scoring: 1.0 = comprehensive coverage of architecture, innovations, and limitations.
+          0.5 = covers some aspects but misses key innovations or limitations.
+          0.0 = incorrect understanding of AlphaFold2 or generic answer without specifics.
+    tags:
+      benchmark: FrontierScience-Bio
+      category: Research
+      subject: Structural Biology
+      answer_type: free_text
+      difficulty: hard

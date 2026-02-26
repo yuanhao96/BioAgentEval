@@ -1,0 +1,159 @@
+name: bioagent_bench
+description: >-
+  BioAgent Bench benchmark — end-to-end bioinformatics pipeline tasks requiring
+  agents to complete multi-step computational workflows. Agents must orchestrate
+  tool usage, write code, manage intermediate outputs, and produce final results.
+  Tasks simulate real-world bioinformatics challenges. Representative sample tasks
+  for harness validation.
+eval_type: capability
+default_num_trials: 3
+default_graders:
+  - type: code
+  - type: model
+    rubric: >-
+      Evaluate the agent's pipeline for completeness, correctness, and appropriate
+      tool orchestration. Scoring: 1.0 = complete pipeline with correct results,
+      0.5 = partially complete or with minor errors, 0.0 = fundamentally incorrect
+      or incomplete pipeline.
+default_tracked_metrics:
+  - type: transcript
+    metrics:
+      - n_turns
+      - n_tool_calls
+  - type: latency
+    metrics:
+      - time_to_last_token
+
+tasks:
+  - id: bioagent_rnaseq_pipeline
+    question: >-
+      Complete an RNA-seq analysis pipeline from raw FASTQ files to a list of
+      differentially expressed genes. The pipeline should include: (1) quality
+      control with FastQC, (2) adapter trimming with Trimmomatic or fastp,
+      (3) alignment to the human reference genome (hg38) with STAR or HISAT2,
+      (4) quantification with featureCounts or HTSeq, (5) differential expression
+      analysis with DESeq2. Report the top 20 differentially expressed genes
+      with log2 fold change and adjusted p-values.
+    expected_output:
+      - type: tool_calls
+        value:
+          - tool_name: run_fastqc
+          - tool_name: run_trimming
+          - tool_name: run_alignment
+          - tool_name: run_quantification
+      - type: code_valid
+        value:
+          language: python
+      - type: keyword_coverage
+        value:
+          keywords:
+            - quality control
+            - alignment
+            - differential expression
+            - fold change
+            - adjusted p-value
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The pipeline should execute all 5 steps in order: (1) FastQC for quality
+          assessment. (2) Adapter/quality trimming. (3) Alignment to hg38 with
+          splice-aware aligner. (4) Read quantification per gene. (5) DESeq2
+          analysis with proper design matrix, normalization, and multiple testing
+          correction. Must report top 20 DE genes with log2FC and padj.
+
+          Scoring: 1.0 = all 5 steps executed correctly with proper DE results.
+          0.5 = pipeline runs but missing a step or incorrect parameters.
+          0.0 = pipeline fails or produces incorrect results.
+    tags:
+      benchmark: BioAgent Bench
+      category: RNAseq
+      subject: Transcriptomics
+      answer_type: pipeline
+      difficulty: hard
+
+  - id: bioagent_variant_calling_pipeline
+    question: >-
+      Build a variant calling pipeline for whole-exome sequencing data. Starting
+      from aligned BAM files, perform: (1) mark duplicates with Picard or samtools,
+      (2) base quality score recalibration (BQSR), (3) variant calling with GATK
+      HaplotypeCaller, (4) variant filtering (VQSR or hard filters), (5) annotation
+      with VEP or SnpEff. Report the number of variants found, the Ti/Tv ratio,
+      and the top 5 predicted pathogenic variants.
+    expected_output:
+      - type: tool_calls
+        value:
+          - tool_name: mark_duplicates
+          - tool_name: variant_caller
+          - tool_name: annotate_variants
+      - type: code_valid
+        value:
+          language: python
+      - type: numeric_tolerance
+        value:
+          expected: 2.1
+          abs_tol: 0.3
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The pipeline should: (1) Mark duplicate reads. (2) Apply BQSR with
+          known variants (dbSNP). (3) Call variants with GATK HaplotypeCaller
+          in GVCF mode. (4) Apply appropriate filters (VQSR preferred, hard
+          filters acceptable). (5) Annotate variants for functional impact.
+          (6) Report summary statistics including Ti/Tv ratio (~2.0-2.1 expected
+          for exomes). (7) Identify pathogenic variants (ClinVar significance).
+
+          Scoring: 1.0 = complete pipeline with Ti/Tv in expected range and annotations.
+          0.5 = pipeline runs but missing BQSR or filtering.
+          0.0 = incorrect variant calling or no annotation.
+    tags:
+      benchmark: BioAgent Bench
+      category: VariantCalling
+      subject: Genomics
+      answer_type: pipeline
+      difficulty: hard
+
+  - id: bioagent_metagenomics_pipeline
+    question: >-
+      Analyze a shotgun metagenomics dataset from human gut samples. Build a pipeline
+      that: (1) performs quality control and host read removal, (2) taxonomic
+      classification with Kraken2 or MetaPhlAn, (3) generates species-level abundance
+      profiles, (4) calculates alpha diversity (Shannon index) and beta diversity
+      (Bray-Curtis), (5) identifies differentially abundant taxa between healthy
+      and disease groups.
+    expected_output:
+      - type: tool_calls
+        value:
+          - tool_name: quality_control
+          - tool_name: taxonomic_classification
+      - type: code_valid
+        value:
+          language: python
+      - type: keyword_coverage
+        value:
+          keywords:
+            - taxonomic
+            - diversity
+            - abundance
+            - Shannon
+            - Bray-Curtis
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The pipeline should: (1) QC with fastp/Trimmomatic, remove host reads
+          (bowtie2 vs human genome). (2) Classify reads taxonomically (Kraken2
+          or MetaPhlAn). (3) Generate species-level abundance table. (4) Calculate
+          Shannon diversity per sample and Bray-Curtis dissimilarity matrix. (5)
+          Statistical test for differential abundance (LEfSe, ANCOM, or Wilcoxon).
+
+          Scoring: 1.0 = complete pipeline with diversity metrics and DA analysis.
+          0.5 = pipeline runs but missing host removal or diversity calculations.
+          0.0 = incorrect taxonomic method or no statistical analysis.
+    tags:
+      benchmark: BioAgent Bench
+      category: Metagenomics
+      subject: Microbiome
+      answer_type: pipeline
+      difficulty: hard

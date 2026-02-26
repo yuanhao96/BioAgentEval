@@ -2,7 +2,7 @@
 
 ## Goal Summary
 
-Extend BioAgentEval's features (new graders, metrics) and improve robustness to support all agent evaluation applications described in Anthropic's "Demystifying Evals for AI Agents" guide. This includes: multi-provider model grading (Anthropic + OpenAI), LLM judge enhancements (pairwise comparison, multi-judge consensus, uncertainty handling), agent-type-specific evaluation patterns (coding, research, conversational, computer-use), suite lifecycle management (capability vs regression classification, saturation-based promotion), and robustness/observability improvements (trial isolation, transcript analysis, grader calibration).
+Extend BioAgentEval's features (new graders, metrics) and improve robustness to support all agent evaluation applications described in Anthropic's "Demystifying Evals for AI Agents" guide. Additionally, the harness should successfully support all biology benchmarks (each as an individual task suite): HLE-Bio, FrontierScience-Bio, LAB-Bench, Biomni-Eval1, BixBench, BioML-Bench, SpatialBench/scBench, BioAgent Bench.
 
 ## Completed Milestones
 
@@ -49,6 +49,46 @@ Extend BioAgentEval's features (new graders, metrics) and improve robustness to 
   - [x] Trial timeout support (per-task via metadata, runner-level default)
   - [x] Tests for all new functionality (25 new tests)
 
-## Project Complete
+### Milestone: Specialized Grader Types for Benchmark Support
+- **Status**: completed
+- **Date completed**: 2026-02-25
+- **Summary**: Added 4 new CodeGrader check types for benchmark evaluation: exact_match (normalized string comparison), set_similarity (Jaccard coefficient), precision_at_k (top-K precision for ranked lists), numeric_tolerance (absolute/relative tolerance). 27 new tests, 329 total, 0 regressions.
+- **Acceptance criteria met**:
+  - [x] `exact_match` check type: normalized string comparison with case/whitespace options
+  - [x] `set_similarity` check type: Jaccard coefficient between predicted and expected sets
+  - [x] `precision_at_k` check type: top-K precision for ranked gene/feature lists
+  - [x] `numeric_tolerance` check type: numeric answer within absolute/relative tolerance
+  - [x] Tests for all new check types (27 new tests)
 
-All 4 milestones completed. 302 tests pass. The eval harness now supports all major patterns from Anthropic's "Demystifying Evals for AI Agents" guide.
+### Milestone: Text-Based Benchmark Suites (FrontierScience-Bio, LAB-Bench)
+- **Status**: completed
+- **Date completed**: 2026-02-25
+- **Summary**: Created task suite YAMLs for FrontierScience-Bio (6 tasks: 3 Olympiad with exact_match+numeric_tolerance, 3 Research with keyword_coverage) and LAB-Bench (12 tasks: 3 per subcategory with mcq_answer). Verified HLE-Bio suite loads and grades correctly. 32 new tests, 361 total, 0 regressions.
+- **Acceptance criteria met**:
+  - [x] FrontierScience-Bio task suite YAML with 6 representative sample tasks (3 Olympiad + 3 Research)
+  - [x] LAB-Bench task suite YAML with 12 representative sample tasks (3 LitQA2, 3 CloningScenarios, 3 ProtocolQA, 3 SeqQA)
+  - [x] HLE-Bio suite verified to work with current graders (6 tests)
+  - [x] Each suite uses appropriate grader configurations (exact_match, numeric_tolerance, keyword_coverage, mcq_answer, model judge)
+  - [x] Suite validation passes for all suites (32 new tests)
+
+### Milestone: Agentic Benchmark Suites (Biomni-Eval1, BixBench, BioML-Bench, SpatialBench/scBench, BioAgent Bench)
+- **Status**: completed
+- **Date completed**: 2026-02-25
+- **Summary**: Created 6 task suite YAMLs for agentic benchmarks: Biomni-Eval1 (3 tasks: DryLab+WetLab), BixBench (3 tasks: code execution), BioML-Bench (3 tasks: ML pipelines), SpatialBench (3 tasks: spatial transcriptomics), scBench (3 tasks: single-cell analysis), BioAgent Bench (3 tasks: end-to-end pipelines). 36 new tests, 397 total, 0 regressions.
+- **Acceptance criteria met**:
+  - [x] Biomni-Eval1 task suite YAML with 3 representative tasks (tool_calls + keyword_coverage + model judge)
+  - [x] BixBench task suite YAML with 3 representative tasks (code_valid + keyword_coverage)
+  - [x] BioML-Bench task suite YAML with 3 representative tasks (code_valid + numeric_tolerance + set_similarity)
+  - [x] SpatialBench task suite YAML with 3 representative tasks (set_similarity + keyword_coverage)
+  - [x] scBench task suite YAML with 3 representative tasks (set_similarity + code_valid + numeric_tolerance)
+  - [x] BioAgent Bench task suite YAML with 3 representative tasks (tool_calls + code_valid + keyword_coverage)
+  - [x] All suites use appropriate grader configurations
+  - [x] Validation tests pass for all new suites (36 new tests)
+
+## Current Milestone
+
+None — all milestones for the current goal are complete.
+
+## Upcoming Milestones
+
+None.

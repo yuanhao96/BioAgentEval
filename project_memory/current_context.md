@@ -2,8 +2,8 @@
 
 ## Active Milestone
 
-**Name**: Robustness, Isolation & Observability
-**Goal**: Add trial isolation hooks, transcript analysis utilities, grader calibration, and trial timeout.
+**Name**: Agentic Benchmark Suites (Biomni-Eval1, BixBench, BioML-Bench, SpatialBench/scBench, BioAgent Bench)
+**Goal**: Create task suite YAMLs for 5 agentic biology benchmarks (6 YAML files total).
 
 ## Current Phase
 
@@ -12,12 +12,12 @@
 
 ## Key Decisions
 
-- TrialHook as Protocol (same pattern as AgentHarness) with setup(task) and teardown(task, trial) [R1]
-- Hooks passed as list to EvalRunner, wrapped in try/except so failures don't break trials [R1]
-- Transcript analysis: 3 pure functions in transcript_analysis.py (summarize, extract_tool_sequence, detect_retries) [R1]
-- Grader calibration: accuracy/precision/recall + confusion matrix, no Cohen's kappa [R2]
-- Trial timeout: default_timeout on runner + per-task override via task.metadata["timeout"] [R2]
-- Thread timeout limitation accepted: thread continues but runner unblocks [R2]
+- 3 tasks per benchmark (15 + 3 BioAgent Bench = 18 total tasks, 6 YAML files) [R1]
+- SpatialBench and scBench as separate YAML files [R1]
+- Grader combos: Biomni (tool_calls+model), BixBench (code_valid+test_results+model), BioML (numeric_tolerance+set_similarity+code_valid), SpatialBench/scBench (set_similarity+numeric_tolerance+exact_match), BioAgent (code_valid+tool_calls+model) [R1]
+- No new grader types needed — existing 17 check types cover all patterns [R1]
+- Use >- folded block scalars for long questions [R2]
+- Verify value schemas against _check_X functions before writing YAML [R2]
 
 ## Blockers
 
@@ -25,20 +25,20 @@
 
 ## Plan Reference
 
-Full plan: `docs/plans/2026-02-25-robustness-observability.md`
+Full plan: `docs/plans/2026-02-25-agentic-benchmark-suites.md`
 
 ### Steps
 
-1. [ ] Add TrialHook Protocol to harness.py
-2. [ ] Integrate TrialHook into EvalRunner
-3. [ ] Add trial timeout to EvalRunner
-4. [ ] Create transcript_analysis.py
-5. [ ] Create calibration.py
-6. [ ] Write tests
-7. [ ] Run full test suite
+1. [ ] Create Biomni-Eval1 suite (3 tasks)
+2. [ ] Create BixBench suite (3 tasks)
+3. [ ] Create BioML-Bench suite (3 tasks)
+4. [ ] Create SpatialBench suite (3 tasks)
+5. [ ] Create scBench suite (3 tasks)
+6. [ ] Create BioAgent Bench suite (3 tasks)
+7. [ ] Add validation tests
+8. [ ] Run full test suite
 
 ## Notes
 
-- Lesson from M1: Protocol-based abstraction is clean and testable
-- Lesson from M3: single-module approach keeps things simple
-- Hook implementations must be thread-safe if max_concurrency > 1
+- Lesson from M6: YAML value keys must match _check_X function signatures exactly
+- Standard tags: benchmark, category, subject, answer_type, difficulty

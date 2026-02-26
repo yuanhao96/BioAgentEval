@@ -1,0 +1,131 @@
+name: bixbench
+description: >-
+  BixBench benchmark — bioinformatics code execution tasks where agents must write
+  and run code to analyze biological datasets. Tasks involve reading data files,
+  performing computational analyses, and producing correct results. Evaluates both
+  code quality and analytical accuracy. Representative sample tasks for harness
+  validation.
+eval_type: capability
+default_num_trials: 3
+default_graders:
+  - type: code
+  - type: model
+    rubric: >-
+      Evaluate the agent's code for correctness, efficiency, and scientific soundness.
+      Scoring: 1.0 = correct code producing accurate results, 0.5 = code runs but
+      with minor errors or suboptimal approach, 0.0 = code fails or produces wrong results.
+default_tracked_metrics:
+  - type: transcript
+    metrics:
+      - n_turns
+      - n_tool_calls
+  - type: latency
+    metrics:
+      - time_to_last_token
+
+tasks:
+  - id: bix_sequence_gc_content
+    question: >-
+      Write a Python script that reads a FASTA file containing multiple DNA sequences,
+      calculates the GC content of each sequence, and outputs a tab-separated table
+      with columns: sequence_id, length, gc_content (as a decimal between 0 and 1).
+      Sort the output by GC content in descending order.
+    expected_output:
+      - type: code_valid
+        value:
+          language: python
+      - type: keyword_coverage
+        value:
+          keywords:
+            - open
+            - GC content
+            - sorted
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The code should: (1) Parse FASTA format correctly (handle multi-line sequences,
+          header lines starting with >). (2) Calculate GC content as (G+C)/total_length.
+          (3) Output tab-separated table with correct columns. (4) Sort by GC content
+          descending. (5) Handle edge cases (empty sequences, ambiguous bases).
+
+          Scoring: 1.0 = correct parsing, calculation, and sorted output.
+          0.5 = correct calculation but formatting or sorting issues.
+          0.0 = incorrect GC calculation or fails to parse FASTA.
+    tags:
+      benchmark: BixBench
+      category: SequenceAnalysis
+      subject: Bioinformatics
+      answer_type: code
+      difficulty: easy
+
+  - id: bix_variant_filtering
+    question: >-
+      Write a Python script that reads a VCF file and filters variants based on
+      the following criteria: (1) QUAL score >= 30, (2) read depth (DP) >= 10,
+      (3) allele frequency (AF) >= 0.05. Output the filtered variants in VCF
+      format, preserving the header lines.
+    expected_output:
+      - type: code_valid
+        value:
+          language: python
+      - type: keyword_coverage
+        value:
+          keywords:
+            - QUAL
+            - DP
+            - filter
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The code should: (1) Parse VCF format correctly (preserve ## header lines,
+          parse #CHROM header, parse data lines). (2) Extract QUAL from column 6.
+          (3) Parse INFO field to extract DP and AF values. (4) Apply all three
+          filter criteria. (5) Output valid VCF with preserved headers.
+
+          Scoring: 1.0 = correct parsing, all filters applied, valid VCF output.
+          0.5 = filters applied but VCF format issues or missing one criterion.
+          0.0 = incorrect parsing or wrong filter logic.
+    tags:
+      benchmark: BixBench
+      category: VariantAnalysis
+      subject: Bioinformatics
+      answer_type: code
+      difficulty: medium
+
+  - id: bix_phylogenetic_distance
+    question: >-
+      Write a Python script that reads a multiple sequence alignment in FASTA format,
+      computes a pairwise distance matrix using the Jukes-Cantor model, and outputs
+      the distance matrix in PHYLIP lower-triangular format. Use the formula:
+      d = -3/4 * ln(1 - 4/3 * p) where p is the proportion of differing sites.
+    expected_output:
+      - type: code_valid
+        value:
+          language: python
+      - type: keyword_coverage
+        value:
+          keywords:
+            - Jukes-Cantor
+            - distance
+            - alignment
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The code should: (1) Read aligned FASTA sequences. (2) Compute pairwise
+          proportion of differing sites (p), excluding gaps. (3) Apply Jukes-Cantor
+          correction: d = -3/4 * ln(1 - 4/3*p). (4) Handle undefined values when
+          p >= 3/4 (saturation). (5) Output in PHYLIP lower-triangular format
+          (first line: number of taxa, then taxon name followed by distances).
+
+          Scoring: 1.0 = correct JC formula, gap handling, and PHYLIP output.
+          0.5 = correct distances but wrong output format or no gap handling.
+          0.0 = incorrect distance formula or fails to read alignment.
+    tags:
+      benchmark: BixBench
+      category: Phylogenetics
+      subject: Bioinformatics
+      answer_type: code
+      difficulty: hard

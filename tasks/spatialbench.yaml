@@ -1,0 +1,148 @@
+name: spatialbench
+description: >-
+  SpatialBench benchmark — spatial transcriptomics analysis tasks. Agents must
+  analyze spatially-resolved gene expression data to identify spatial domains,
+  cell-cell interactions, and spatially variable genes. Tasks evaluate the agent's
+  ability to produce correct spatial analysis outputs. Representative sample tasks
+  for harness validation.
+eval_type: capability
+default_num_trials: 3
+default_graders:
+  - type: code
+  - type: model
+    rubric: >-
+      Evaluate the spatial analysis output for correctness and biological relevance.
+      Scoring: 1.0 = correct results with proper spatial methodology, 0.5 = partially
+      correct or suboptimal method, 0.0 = incorrect results or wrong approach.
+default_tracked_metrics:
+  - type: transcript
+    metrics:
+      - n_turns
+      - n_tool_calls
+  - type: latency
+    metrics:
+      - time_to_last_token
+
+tasks:
+  - id: spatial_domain_identification
+    question: >-
+      Given a 10x Visium spatial transcriptomics dataset from mouse brain cortex,
+      identify distinct spatial domains (tissue regions). Report the number of
+      domains identified, the top 5 marker genes for each domain, and assign
+      biological labels to each domain (e.g., cortex layer 1, white matter, etc.).
+    expected_output:
+      - type: set_similarity
+        value:
+          expected:
+            - Layer 1
+            - Layer 2/3
+            - Layer 4
+            - Layer 5
+            - Layer 6
+            - White Matter
+          separator: ","
+      - type: keyword_coverage
+        value:
+          keywords:
+            - spatial domain
+            - marker gene
+            - cortex
+            - clustering
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The analysis should: (1) Apply a spatial clustering method (SpaGCN,
+          BayesSpace, STAGATE, or Louvain with spatial weights). (2) Identify
+          6-8 spatial domains corresponding to cortical layers and white matter.
+          (3) Report marker genes per domain (e.g., Reln for L1, Cux2 for L2/3).
+          (4) Assign biologically meaningful labels based on marker expression.
+
+          Scoring: 1.0 = correct number of domains with appropriate labels and markers.
+          0.5 = domains identified but mislabeled or missing some layers.
+          0.0 = incorrect clustering or nonsensical domain assignments.
+    tags:
+      benchmark: SpatialBench
+      category: SpatialDomains
+      subject: Spatial Transcriptomics
+      answer_type: structured_output
+      difficulty: hard
+
+  - id: spatial_variable_genes
+    question: >-
+      Identify the top 20 spatially variable genes (SVGs) in a 10x Visium dataset
+      from human breast cancer tissue. Use an appropriate statistical method for
+      spatial variability testing. Report gene names and their spatial variability
+      scores, sorted by significance.
+    expected_output:
+      - type: set_similarity
+        value:
+          expected:
+            - ERBB2
+            - ESR1
+            - KRT14
+            - FASN
+            - GATA3
+          separator: ","
+      - type: code_valid
+        value:
+          language: python
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The analysis should: (1) Apply a spatial variability test (SpatialDE,
+          SPARK, Moran's I, or similar). (2) Account for multiple testing (FDR
+          correction). (3) Report top 20 SVGs with scores/p-values. (4) Include
+          biologically relevant cancer-related genes (ERBB2, ESR1, etc.).
+
+          Scoring: 1.0 = correct SVG method with FDR correction and biologically relevant results.
+          0.5 = SVGs identified but without proper statistical testing.
+          0.0 = incorrect method or nonsensical gene list.
+    tags:
+      benchmark: SpatialBench
+      category: SpatiallyVariableGenes
+      subject: Spatial Transcriptomics
+      answer_type: structured_output
+      difficulty: medium
+
+  - id: spatial_cell_interaction
+    question: >-
+      Analyze cell-cell communication in a spatial transcriptomics dataset from
+      human liver tissue. Identify the top 5 ligand-receptor interaction pairs
+      between hepatocytes and immune cells based on spatial proximity and expression.
+      Report interaction pairs with their scores.
+    expected_output:
+      - type: set_similarity
+        value:
+          expected:
+            - CCL2-CCR2
+            - CXCL12-CXCR4
+            - TNF-TNFRSF1A
+          separator: ","
+      - type: keyword_coverage
+        value:
+          keywords:
+            - ligand-receptor
+            - hepatocyte
+            - immune
+            - interaction
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The analysis should: (1) Identify cell types (hepatocytes, immune cells)
+          from expression profiles. (2) Use a cell-cell interaction analysis tool
+          (CellChat, CellPhoneDB, COMMOT, or similar). (3) Filter interactions
+          by spatial proximity. (4) Report ligand-receptor pairs with significance
+          scores. (5) Include biologically plausible interactions (chemokines, cytokines).
+
+          Scoring: 1.0 = correct method with spatial filtering and biologically relevant pairs.
+          0.5 = interactions identified but without spatial context.
+          0.0 = incorrect method or irrelevant interaction pairs.
+    tags:
+      benchmark: SpatialBench
+      category: CellInteraction
+      subject: Spatial Transcriptomics
+      answer_type: structured_output
+      difficulty: hard

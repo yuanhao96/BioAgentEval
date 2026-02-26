@@ -1,1 +1,3 @@
 extend the features (new graders, metrics) and improve robustness to support all applications listed in https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents
+
+the harness should successfully support all biology benchmarks listed here, each benchmark should be an individual task suite: https://phylo.bio/blog/evaluating-ai-agents-in-biology (HLE-Bio, FrontierScience-Bio, LAB-Bench / LAB-Bench2, Biomni-Eval1, BixBench, BioML-Bench, SpatialBench / scBench, BioAgent Bench)

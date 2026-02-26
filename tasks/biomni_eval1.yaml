@@ -1,0 +1,144 @@
+name: biomni_eval1
+description: >-
+  Biomni-Eval1 benchmark — multi-modal biomedical agent tasks spanning dry lab
+  (computational analysis, literature review, data interpretation) and wet lab
+  (protocol design, reagent selection, experimental planning). Agents must use
+  appropriate tools and produce scientifically sound outputs. Representative
+  sample tasks for harness validation.
+eval_type: capability
+default_num_trials: 3
+default_graders:
+  - type: code
+  - type: model
+    rubric: >-
+      Evaluate the agent's response for scientific accuracy, appropriate tool usage,
+      and completeness. Scoring: 1.0 = correct with appropriate methodology,
+      0.5 = partially correct or suboptimal approach, 0.0 = incorrect or irrelevant.
+default_tracked_metrics:
+  - type: transcript
+    metrics:
+      - n_turns
+      - n_tool_calls
+  - type: latency
+    metrics:
+      - time_to_last_token
+
+tasks:
+  - id: biomni_drylab_gene_expression
+    question: >-
+      Analyze the provided RNA-seq count matrix to identify differentially expressed
+      genes between tumor and normal tissue samples. Use DESeq2 or equivalent statistical
+      method. Report the top 5 upregulated genes with their log2 fold changes and
+      adjusted p-values.
+    expected_output:
+      - type: tool_calls
+        value:
+          - tool_name: run_analysis
+          - tool_name: statistical_test
+      - type: code_valid
+        value:
+          language: python
+      - type: keyword_coverage
+        value:
+          keywords:
+            - fold change
+            - adjusted p-value
+            - upregulated
+            - differential expression
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The agent should: (1) Load and preprocess the count matrix. (2) Apply
+          appropriate normalization (e.g., DESeq2 median-of-ratios or TMM). (3)
+          Perform differential expression testing with multiple testing correction.
+          (4) Report top 5 upregulated genes with log2FC and adjusted p-values.
+
+          Scoring: 1.0 = complete analysis with proper statistics and top 5 genes reported.
+          0.5 = analysis performed but missing normalization or multiple testing correction.
+          0.0 = incorrect method or no results produced.
+    tags:
+      benchmark: Biomni-Eval1
+      category: DryLab
+      subject: Transcriptomics
+      answer_type: analysis
+      difficulty: hard
+
+  - id: biomni_drylab_literature_review
+    question: >-
+      Search the literature for recent studies on the role of gut microbiome
+      in immunotherapy response for non-small cell lung cancer (NSCLC). Summarize
+      the key findings from at least 3 studies, including the bacterial species
+      implicated and proposed mechanisms.
+    expected_output:
+      - type: tool_calls
+        value:
+          - tool_name: search_literature
+      - type: groundedness
+        value:
+          min_citations: 3
+      - type: keyword_coverage
+        value:
+          keywords:
+            - microbiome
+            - immunotherapy
+            - NSCLC
+            - Akkermansia
+            - checkpoint inhibitor
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The agent should: (1) Search for relevant literature using appropriate
+          queries. (2) Identify ≥3 studies on gut microbiome and NSCLC immunotherapy.
+          (3) Report specific bacterial species (e.g., Akkermansia muciniphila,
+          Bifidobacterium) and mechanisms (e.g., immune modulation, T-cell activation).
+          (4) Include proper citations.
+
+          Scoring: 1.0 = ≥3 studies cited with species and mechanisms.
+          0.5 = some studies cited but missing species or mechanisms.
+          0.0 = no relevant studies found or incorrect information.
+    tags:
+      benchmark: Biomni-Eval1
+      category: DryLab
+      subject: Immunology
+      answer_type: literature_review
+      difficulty: medium
+
+  - id: biomni_wetlab_protocol_design
+    question: >-
+      Design a Western blot protocol to detect phosphorylated AKT (p-AKT Ser473)
+      in HeLa cell lysates treated with insulin (100 nM, 15 min). Specify the
+      lysis buffer composition, recommended antibodies, blocking conditions,
+      and appropriate controls.
+    expected_output:
+      - type: keyword_coverage
+        value:
+          keywords:
+            - phosphatase inhibitor
+            - primary antibody
+            - secondary antibody
+            - loading control
+            - PVDF
+            - blocking
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The protocol should include: (1) Lysis buffer with phosphatase inhibitors
+          (e.g., sodium orthovanadate, sodium fluoride) and protease inhibitors.
+          (2) Anti-phospho-AKT (Ser473) primary antibody with species and dilution.
+          (3) Appropriate secondary antibody (HRP-conjugated). (4) BSA blocking
+          (not milk, which contains casein phosphoproteins that interfere with
+          phospho-detection). (5) Controls: untreated cells (negative), total AKT
+          (loading normalization), beta-actin or GAPDH (loading control).
+
+          Scoring: 1.0 = complete protocol with phosphatase inhibitors and BSA blocking.
+          0.5 = correct antibodies but missing phosphatase inhibitors or using milk blocking.
+          0.0 = fundamentally incorrect protocol.
+    tags:
+      benchmark: Biomni-Eval1
+      category: WetLab
+      subject: Biochemistry
+      answer_type: protocol
+      difficulty: medium

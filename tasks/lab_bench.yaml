@@ -1,0 +1,463 @@
+name: lab_bench
+description: >-
+  LAB-Bench benchmark — practical laboratory biology questions testing understanding
+  of literature, cloning strategies, experimental protocols, and sequence analysis.
+  Covers four subcategories: LitQA2 (literature comprehension), CloningScenarios
+  (molecular cloning design), ProtocolQA (laboratory protocols), and SeqQA (DNA/protein
+  sequence analysis). All questions are multiple-choice. Representative sample tasks
+  for harness validation.
+eval_type: capability
+default_num_trials: 3
+default_graders:
+  - type: code
+  - type: model
+    rubric: >-
+      Evaluate whether the agent selected the correct answer choice and demonstrated
+      sound scientific reasoning. Scoring: 1.0 = correct answer with good reasoning,
+      0.5 = correct answer without reasoning or wrong answer with partially correct reasoning,
+      0.0 = incorrect answer.
+default_tracked_metrics:
+  - type: transcript
+    metrics:
+      - n_turns
+      - n_tool_calls
+  - type: latency
+    metrics:
+      - time_to_last_token
+
+tasks:
+  # ── LitQA2 (Literature-based QA) ────────────────────────────────────────
+
+  - id: lb_litqa2_p53_apoptosis
+    question: >-
+      Which of the following best describes the role of p53 in the intrinsic apoptosis
+      pathway?
+
+      A. p53 directly cleaves caspase-3 to initiate apoptosis
+      B. p53 transcriptionally activates pro-apoptotic BCL-2 family members such as
+         BAX and PUMA
+      C. p53 inhibits cytochrome c release from mitochondria
+      D. p53 activates the extrinsic pathway by upregulating Fas ligand exclusively
+    expected_output:
+      - type: mcq_answer
+        value: B
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: B.
+
+          Rationale: p53 is a transcription factor that activates expression of
+          pro-apoptotic BCL-2 family members (BAX, PUMA, NOXA), which promote
+          mitochondrial outer membrane permeabilization and cytochrome c release,
+          activating the intrinsic apoptosis pathway. While p53 can also upregulate
+          Fas/FasL (option D), this is not exclusive, and option B more accurately
+          describes the intrinsic pathway role.
+
+          Scoring: 1.0 = selects B with correct reasoning about p53 transcriptional targets.
+          0.5 = selects B without reasoning, or selects D with partial justification.
+          0.0 = selects A or C (incorrect understanding).
+    tags:
+      benchmark: LAB-Bench
+      category: LitQA2
+      subject: Cell Biology
+      answer_type: mcq
+      difficulty: medium
+
+  - id: lb_litqa2_epigenetics_methylation
+    question: >-
+      DNA methylation at CpG islands in promoter regions is generally associated with
+      which of the following outcomes?
+
+      A. Increased gene expression through enhanced transcription factor binding
+      B. Gene silencing through recruitment of methyl-CpG binding proteins and
+         histone deacetylases
+      C. Increased mRNA stability and translation efficiency
+      D. Enhanced DNA replication at those loci
+    expected_output:
+      - type: mcq_answer
+        value: B
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: B.
+
+          Rationale: CpG island methylation in promoters recruits methyl-CpG binding
+          domain (MBD) proteins, which in turn recruit histone deacetylase (HDAC)
+          complexes. This leads to chromatin compaction and transcriptional silencing.
+          This is a well-established epigenetic mechanism of gene regulation.
+
+          Scoring: 1.0 = selects B with understanding of the MBD/HDAC mechanism.
+          0.5 = selects B without mechanistic explanation.
+          0.0 = selects A, C, or D.
+    tags:
+      benchmark: LAB-Bench
+      category: LitQA2
+      subject: Epigenetics
+      answer_type: mcq
+      difficulty: easy
+
+  - id: lb_litqa2_rna_splicing
+    question: >-
+      In eukaryotic pre-mRNA splicing, the branch point adenosine performs a nucleophilic
+      attack on which position of the 5' splice site?
+
+      A. The 3' hydroxyl of the upstream exon's last nucleotide
+      B. The phosphodiester bond at the 5' end of the intron (GU dinucleotide)
+      C. The 5' cap structure of the mRNA
+      D. The polyadenylation signal sequence
+    expected_output:
+      - type: mcq_answer
+        value: B
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: B.
+
+          Rationale: During the first transesterification step of splicing, the 2'-OH
+          of the branch point adenosine attacks the phosphodiester bond at the 5' splice
+          site (the GU dinucleotide at the intron's 5' end), forming a lariat intermediate.
+          This releases the upstream exon with a free 3'-OH.
+
+          Scoring: 1.0 = selects B with understanding of the transesterification mechanism.
+          0.5 = selects B without mechanistic detail.
+          0.0 = selects A, C, or D.
+    tags:
+      benchmark: LAB-Bench
+      category: LitQA2
+      subject: Molecular Biology
+      answer_type: mcq
+      difficulty: medium
+
+  # ── CloningScenarios (Molecular Cloning Design) ─────────────────────────
+
+  - id: lb_cloning_restriction_digest
+    question: >-
+      You want to clone a 2 kb insert into the MCS of pUC19 using EcoRI and HindIII.
+      Your insert has an internal EcoRI site. Which strategy would best solve this problem?
+
+      A. Use a partial EcoRI digest of the insert and gel-purify the full-length fragment
+      B. Switch to enzymes that do not cut internally — for example, use BamHI and
+         HindIII if compatible sites can be added via PCR primers
+      C. Increase the amount of EcoRI enzyme to ensure complete digestion
+      D. Ligate the insert without any restriction digest
+    expected_output:
+      - type: mcq_answer
+        value: B
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: B.
+
+          Rationale: An internal EcoRI site means complete EcoRI digestion will cut
+          the insert into fragments. The best strategy is to avoid using EcoRI entirely
+          and instead PCR-amplify the insert with primers containing compatible
+          restriction sites (e.g., BamHI + HindIII) that don't cut internally. Option A
+          (partial digest) is unreliable. Option C worsens the problem. Option D
+          produces random orientation and low efficiency.
+
+          Scoring: 1.0 = selects B with reasoning about internal site avoidance.
+          0.5 = selects A with reasonable justification.
+          0.0 = selects C or D.
+    tags:
+      benchmark: LAB-Bench
+      category: CloningScenarios
+      subject: Molecular Cloning
+      answer_type: mcq
+      difficulty: medium
+
+  - id: lb_cloning_gateway_vs_traditional
+    question: >-
+      Which advantage does Gateway cloning (using att sites and LR Clonase) provide
+      over traditional restriction enzyme-based cloning?
+
+      A. Higher fidelity of DNA replication during the cloning process
+      B. Directional, sequence-independent transfer of inserts between compatible
+         vectors without restriction enzymes or ligase
+      C. Ability to clone fragments larger than 50 kb
+      D. Elimination of the need for competent cells during transformation
+    expected_output:
+      - type: mcq_answer
+        value: B
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: B.
+
+          Rationale: Gateway cloning uses site-specific recombination (att sites with
+          LR Clonase) to transfer inserts between entry and destination vectors. This
+          is directional, does not require restriction enzymes or ligase, and works
+          regardless of insert sequence (no need to check for internal restriction
+          sites). It does not improve replication fidelity (A), is not designed for
+          very large inserts like BACs (C), and still requires transformation (D).
+
+          Scoring: 1.0 = selects B with understanding of att-site recombination.
+          0.5 = selects B without explanation.
+          0.0 = selects A, C, or D.
+    tags:
+      benchmark: LAB-Bench
+      category: CloningScenarios
+      subject: Molecular Cloning
+      answer_type: mcq
+      difficulty: easy
+
+  - id: lb_cloning_gibson_assembly
+    question: >-
+      Gibson Assembly requires overlapping DNA fragments. What are the three enzymatic
+      activities present in the Gibson Assembly master mix?
+
+      A. Restriction endonuclease, DNA ligase, and DNA polymerase
+      B. 5' exonuclease, DNA polymerase, and DNA ligase
+      C. 3' exonuclease, reverse transcriptase, and topoisomerase
+      D. Helicase, primase, and DNA polymerase
+    expected_output:
+      - type: mcq_answer
+        value: B
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: B.
+
+          Rationale: Gibson Assembly uses three enzymes working in concert:
+          (1) T5 exonuclease (5' exonuclease) — chews back 5' ends to create
+          single-stranded 3' overhangs that anneal at overlapping regions;
+          (2) Phusion DNA polymerase — fills in gaps;
+          (3) Taq DNA ligase — seals nicks in the assembled molecule.
+          This enables seamless, scarless assembly of multiple DNA fragments.
+
+          Scoring: 1.0 = selects B and can name the three enzymatic activities correctly.
+          0.5 = selects B without explanation.
+          0.0 = selects A, C, or D.
+    tags:
+      benchmark: LAB-Bench
+      category: CloningScenarios
+      subject: Molecular Cloning
+      answer_type: mcq
+      difficulty: medium
+
+  # ── ProtocolQA (Laboratory Protocols) ────────────────────────────────────
+
+  - id: lb_protocol_western_blot
+    question: >-
+      During a Western blot, after transferring proteins to a PVDF membrane, the membrane
+      is blocked with 5% non-fat milk or BSA. What is the primary purpose of the
+      blocking step?
+
+      A. To fix the proteins permanently to the membrane
+      B. To prevent non-specific antibody binding to unoccupied sites on the membrane
+      C. To denature the proteins for better antibody recognition
+      D. To increase the transfer efficiency of remaining proteins
+    expected_output:
+      - type: mcq_answer
+        value: B
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: B.
+
+          Rationale: After protein transfer, the membrane has unoccupied binding sites
+          that could non-specifically bind primary or secondary antibodies, causing
+          high background signal. Blocking with milk proteins or BSA saturates these
+          sites, ensuring that antibodies bind only to the target protein. Blocking does
+          not fix proteins (A), denature them (C), or improve transfer (D).
+
+          Scoring: 1.0 = selects B with explanation of non-specific binding prevention.
+          0.5 = selects B without reasoning.
+          0.0 = selects A, C, or D.
+    tags:
+      benchmark: LAB-Bench
+      category: ProtocolQA
+      subject: Biochemistry
+      answer_type: mcq
+      difficulty: easy
+
+  - id: lb_protocol_pcr_optimization
+    question: >-
+      You are performing PCR and observe multiple non-specific bands in addition to your
+      expected product. Which of the following modifications is most likely to increase
+      specificity?
+
+      A. Decrease the annealing temperature by 5°C
+      B. Increase the annealing temperature by 5°C
+      C. Increase the number of PCR cycles from 30 to 45
+      D. Add more template DNA to the reaction
+    expected_output:
+      - type: mcq_answer
+        value: B
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: B.
+
+          Rationale: Non-specific bands result from primer mispriming at off-target sites.
+          Increasing the annealing temperature raises the stringency of primer binding,
+          requiring more perfect matches and thus reducing non-specific amplification.
+          Decreasing temperature (A) would worsen the problem. More cycles (C) amplify
+          non-specific products further. More template (D) increases all products
+          including non-specific ones.
+
+          Scoring: 1.0 = selects B with explanation of annealing stringency.
+          0.5 = selects B without reasoning.
+          0.0 = selects A, C, or D.
+    tags:
+      benchmark: LAB-Bench
+      category: ProtocolQA
+      subject: Molecular Biology
+      answer_type: mcq
+      difficulty: easy
+
+  - id: lb_protocol_cell_culture_contamination
+    question: >-
+      You notice your mammalian cell culture medium has become turbid overnight and the
+      pH indicator has turned yellow. Microscopic examination reveals small motile
+      particles. What is the most likely contaminant, and what is the appropriate
+      immediate action?
+
+      A. Mycoplasma contamination; treat with Plasmocin and continue culture
+      B. Bacterial contamination; discard the culture, decontaminate the hood, and
+         check aseptic technique
+      C. Yeast contamination; add amphotericin B and continue culture
+      D. Viral contamination; no visible signs would be present, so this is normal
+         cell debris
+    expected_output:
+      - type: mcq_answer
+        value: B
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: B.
+
+          Rationale: Rapid turbidity, pH drop (yellow phenol red indicator = acidic),
+          and small motile particles under microscopy are classic signs of bacterial
+          contamination. The appropriate response is to discard the contaminated
+          culture immediately (do not try to rescue), decontaminate the biosafety
+          cabinet, and review aseptic technique. Mycoplasma (A) is typically invisible
+          and doesn't cause turbidity. Yeast (C) appears as larger round budding cells.
+          Viral contamination (D) doesn't cause turbidity.
+
+          Scoring: 1.0 = selects B with correct identification and appropriate response.
+          0.5 = correct identification but suggests trying to rescue the culture.
+          0.0 = selects A, C, or D.
+    tags:
+      benchmark: LAB-Bench
+      category: ProtocolQA
+      subject: Cell Biology
+      answer_type: mcq
+      difficulty: easy
+
+  # ── SeqQA (Sequence Analysis) ───────────────────────────────────────────
+
+  - id: lb_seqqa_reading_frame
+    question: >-
+      Given the following mRNA sequence starting from the 5' cap:
+      5'-AUGCCUGAAUUCGGAUAA-3'
+      How many amino acids would be translated from this sequence (not counting the
+      stop codon)?
+
+      A. 4
+      B. 5
+      C. 6
+      D. 3
+    expected_output:
+      - type: mcq_answer
+        value: B
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: B (5 amino acids).
+
+          Rationale: Reading in triplets from AUG:
+          AUG (Met) - CCU (Pro) - GAA (Glu) - UUC (Phe) - GGA (Gly) - UAA (Stop).
+          That gives 5 amino acids (Met-Pro-Glu-Phe-Gly) before the UAA stop codon.
+          The stop codon is not translated into an amino acid.
+
+          Scoring: 1.0 = selects B with correct codon-by-codon reading.
+          0.5 = selects B without showing the reading frame.
+          0.0 = selects A, C, or D.
+    tags:
+      benchmark: LAB-Bench
+      category: SeqQA
+      subject: Molecular Biology
+      answer_type: mcq
+      difficulty: easy
+
+  - id: lb_seqqa_restriction_site
+    question: >-
+      Which restriction enzyme recognizes the following palindromic sequence?
+      5'-GAATTC-3'
+      3'-CTTAAG-5'
+
+      A. BamHI
+      B. HindIII
+      C. EcoRI
+      D. NotI
+    expected_output:
+      - type: mcq_answer
+        value: C
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: C (EcoRI).
+
+          Rationale: EcoRI recognizes the palindromic sequence 5'-GAATTC-3' and cuts
+          between G and A to produce 5' sticky ends. BamHI recognizes GGATCC,
+          HindIII recognizes AAGCTT, and NotI recognizes GCGGCCGC.
+
+          Scoring: 1.0 = selects C with correct recognition sequence knowledge.
+          0.5 = selects C without explanation.
+          0.0 = selects A, B, or D.
+    tags:
+      benchmark: LAB-Bench
+      category: SeqQA
+      subject: Molecular Biology
+      answer_type: mcq
+      difficulty: easy
+
+  - id: lb_seqqa_blast_interpretation
+    question: >-
+      You run a BLAST search with a protein sequence and obtain the following top hit:
+      E-value: 3e-45, Query coverage: 98%, Identity: 67%.
+      Which interpretation is most accurate?
+
+      A. The match is likely a sequencing artifact due to the low E-value
+      B. The query and subject are likely orthologs or close paralogs with strong
+         evolutionary conservation
+      C. The low identity percentage means the proteins have completely different functions
+      D. The result is not statistically significant and should be ignored
+    expected_output:
+      - type: mcq_answer
+        value: B
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          Expected answer: B.
+
+          Rationale: An E-value of 3e-45 is extremely significant (much less than the
+          typical threshold of 1e-5), indicating the match is very unlikely due to
+          chance. Query coverage of 98% means nearly the entire query aligns. Identity
+          of 67% indicates substantial sequence conservation, consistent with orthologs
+          or close paralogs. While 67% identity doesn't guarantee identical function,
+          it strongly suggests evolutionary relationship and likely similar function.
+          Low E-values indicate significance, not artifacts (A). 67% identity is
+          substantial (C is wrong). The result is highly significant (D is wrong).
+
+          Scoring: 1.0 = selects B with correct interpretation of E-value and identity.
+          0.5 = selects B without explaining E-value significance.
+          0.0 = selects A, C, or D.
+    tags:
+      benchmark: LAB-Bench
+      category: SeqQA
+      subject: Bioinformatics
+      answer_type: mcq
+      difficulty: medium

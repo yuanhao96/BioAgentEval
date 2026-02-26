@@ -1,0 +1,153 @@
+name: bioml_bench
+description: >-
+  BioML-Bench benchmark — machine learning pipeline tasks for biological data.
+  Agents must build ML models, select features, tune hyperparameters, and evaluate
+  predictions on biological datasets. Tasks cover drug response prediction, protein
+  function classification, and biomarker discovery. Representative sample tasks
+  for harness validation.
+eval_type: capability
+default_num_trials: 3
+default_graders:
+  - type: code
+  - type: model
+    rubric: >-
+      Evaluate the ML pipeline for correctness, appropriate methodology, and result
+      quality. Scoring: 1.0 = sound methodology with correct results, 0.5 = reasonable
+      approach with minor issues, 0.0 = fundamentally flawed methodology or wrong results.
+default_tracked_metrics:
+  - type: transcript
+    metrics:
+      - n_turns
+      - n_tool_calls
+  - type: latency
+    metrics:
+      - time_to_last_token
+
+tasks:
+  - id: bioml_drug_response_prediction
+    question: >-
+      Build a machine learning model to predict drug sensitivity (IC50 values)
+      from gene expression profiles. Use the provided training dataset with 500
+      cell lines and 1000 gene features. Report the test set RMSE and the top 10
+      most important features (genes). Use an appropriate regression model with
+      cross-validation.
+    expected_output:
+      - type: code_valid
+        value:
+          language: python
+      - type: numeric_tolerance
+        value:
+          expected: 0.85
+          abs_tol: 0.15
+      - type: keyword_coverage
+        value:
+          keywords:
+            - cross-validation
+            - feature importance
+            - RMSE
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The pipeline should: (1) Load and preprocess gene expression data (handle
+          missing values, normalize). (2) Split data with proper train/test separation.
+          (3) Use an appropriate regression model (Random Forest, XGBoost, or similar).
+          (4) Perform cross-validation for model selection. (5) Report test RMSE.
+          (6) Extract and report top 10 features by importance.
+
+          Scoring: 1.0 = complete pipeline with CV, proper evaluation, and feature ranking.
+          0.5 = model built but missing CV or improper train/test split (data leakage).
+          0.0 = incorrect model type or fundamentally flawed pipeline.
+    tags:
+      benchmark: BioML-Bench
+      category: DrugResponse
+      subject: Pharmacogenomics
+      answer_type: ml_pipeline
+      difficulty: hard
+
+  - id: bioml_protein_classification
+    question: >-
+      Train a classifier to predict protein subcellular localization from amino acid
+      composition features. The dataset contains proteins labeled as one of 4
+      compartments: cytoplasm, nucleus, membrane, extracellular. Report the
+      macro-averaged F1 score on the test set and the confusion matrix.
+    expected_output:
+      - type: code_valid
+        value:
+          language: python
+      - type: numeric_tolerance
+        value:
+          expected: 0.75
+          abs_tol: 0.2
+      - type: keyword_coverage
+        value:
+          keywords:
+            - F1 score
+            - confusion matrix
+            - classification
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The pipeline should: (1) Compute amino acid composition features (20
+          standard amino acids). (2) Use an appropriate multi-class classifier
+          (SVM, Random Forest, or neural network). (3) Proper train/test split
+          with stratification. (4) Report macro-averaged F1 score. (5) Generate
+          and report confusion matrix.
+
+          Scoring: 1.0 = correct classifier with stratified split, F1, and confusion matrix.
+          0.5 = classifier works but missing stratification or wrong F1 averaging.
+          0.0 = incorrect approach or no evaluation metrics.
+    tags:
+      benchmark: BioML-Bench
+      category: ProteinClassification
+      subject: Proteomics
+      answer_type: ml_pipeline
+      difficulty: medium
+
+  - id: bioml_feature_selection
+    question: >-
+      Given a gene expression dataset with 20,000 features and 200 samples labeled
+      as disease vs. healthy, perform feature selection to identify the top 50
+      biomarker genes. Use at least two independent feature selection methods and
+      report the intersection of their top features. Validate the selected features
+      by training a classifier and reporting accuracy.
+    expected_output:
+      - type: code_valid
+        value:
+          language: python
+      - type: set_similarity
+        value:
+          expected:
+            - TP53
+            - BRCA1
+            - EGFR
+            - MYC
+            - PTEN
+          separator: ","
+      - type: keyword_coverage
+        value:
+          keywords:
+            - feature selection
+            - biomarker
+            - intersection
+    graders:
+      - type: code
+      - type: model
+        rubric: >-
+          The pipeline should: (1) Apply ≥2 feature selection methods (e.g.,
+          mutual information, LASSO, random forest importance, mRMR, variance
+          threshold). (2) Select top 50 features from each method. (3) Report
+          the intersection of selected features. (4) Train a classifier on the
+          intersection features. (5) Report classification accuracy with proper
+          evaluation.
+
+          Scoring: 1.0 = ≥2 methods applied, intersection reported, classifier validated.
+          0.5 = feature selection done but only one method or no validation.
+          0.0 = incorrect feature selection approach or no results.
+    tags:
+      benchmark: BioML-Bench
+      category: FeatureSelection
+      subject: Genomics
+      answer_type: ml_pipeline
+      difficulty: hard

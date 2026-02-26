@@ -83,6 +83,28 @@ class CodeGrader(BaseGrader):
                 sc_score, sc_details = _check_state(eo.value, transcript)
                 check_results["state_check"] = sc_score
                 extra_details.update(sc_details)
+            elif eo.type == "exact_match":
+                check_results["exact_match"] = _check_exact_match(
+                    eo.value, outcome,
+                )
+            elif eo.type == "set_similarity":
+                ss_score, ss_details = _check_set_similarity(
+                    eo.value, outcome,
+                )
+                check_results["set_similarity"] = ss_score
+                extra_details.update(ss_details)
+            elif eo.type == "precision_at_k":
+                pk_score, pk_details = _check_precision_at_k(
+                    eo.value, outcome,
+                )
+                check_results["precision_at_k"] = pk_score
+                extra_details.update(pk_details)
+            elif eo.type == "numeric_tolerance":
+                nt_score, nt_details = _check_numeric_tolerance(
+                    eo.value, outcome,
+                )
+                check_results["numeric_tolerance"] = nt_score
+                extra_details.update(nt_details)
 
         if not check_results:
             score = 1.0
@@ -512,3 +534,181 @@ def _check_state(
     if failed:
         details["failed_assertions"] = failed
     return score, details
+
+
+# ---------------------------------------------------------------------------
+# Benchmark-specific checks
+# ---------------------------------------------------------------------------
+
+
+def _normalize_text(text: str, case_sensitive: bool = False, strip_whitespace: bool = True) -> str:
+    """Normalize text for comparison."""
+    if strip_whitespace:
+        text = " ".join(text.split())
+    if not case_sensitive:
+        text = text.lower()
+    return text.strip()
+
+
+def _check_exact_match(value: dict[str, Any] | str, outcome: str) -> float:
+    """Check if the outcome exactly matches the expected answer.
+
+    Used by HLE-Bio (short answer), FrontierScience-Bio (Olympiad).
+
+    value formats:
+    - str: the expected answer
+    - dict: {"answer": str, "case_sensitive": bool, "strip_whitespace": bool}
+    """
+    if isinstance(value, str):
+        expected = value
+        case_sensitive = False
+        strip_ws = True
+    else:
+        expected = value.get("answer", "")
+        case_sensitive = value.get("case_sensitive", False)
+        strip_ws = value.get("strip_whitespace", True)
+
+    norm_expected = _normalize_text(expected, case_sensitive, strip_ws)
+    norm_outcome = _normalize_text(outcome, case_sensitive, strip_ws)
+
+    if norm_expected == norm_outcome:
+        return 1.0
+
+    # Also check if the expected answer appears as the final line or after "Answer:"
+    for pattern in [
+        rf"(?:answer|response)\s*[:=]\s*{re.escape(norm_expected)}\s*$",
+        rf"^{re.escape(norm_expected)}\s*$",
+    ]:
+        if re.search(pattern, norm_outcome, re.MULTILINE | (0 if case_sensitive else re.IGNORECASE)):
+            return 1.0
+
+    return 0.0
+
+
+def _check_set_similarity(
+    value: dict[str, Any], outcome: str,
+) -> tuple[float, dict[str, Any]]:
+    """Compute Jaccard similarity between expected and predicted sets.
+
+    Used by SpatialBench/scBench for label set comparisons.
+
+    value: {"expected": ["label1", "label2", ...], "separator": ","}
+    The outcome is split by separator (default: newline or comma) to extract
+    predicted items.
+    """
+    expected_items = value.get("expected", [])
+    if not expected_items:
+        return 1.0, {}
+
+    separator = value.get("separator", r"[,\n]")
+    predicted_raw = re.split(separator, outcome)
+    predicted_items = [item.strip().lower() for item in predicted_raw if item.strip()]
+
+    expected_set = {item.lower() for item in expected_items}
+    predicted_set = set(predicted_items)
+
+    intersection = expected_set & predicted_set
+    union = expected_set | predicted_set
+
+    if not union:
+        return 1.0, {}
+
+    jaccard = len(intersection) / len(union)
+
+    return jaccard, {
+        "expected_count": len(expected_set),
+        "predicted_count": len(predicted_set),
+        "intersection_count": len(intersection),
+        "jaccard": jaccard,
+    }
+
+
+def _check_precision_at_k(
+    value: dict[str, Any], outcome: str,
+) -> tuple[float, dict[str, Any]]:
+    """Compute precision@K for ranked lists.
+
+    Used by SpatialBench/scBench for gene list evaluation.
+
+    value: {"expected": ["gene1", "gene2", ...], "k": 10, "separator": ","}
+    The outcome is split to extract a ranked list; only the top K items
+    are evaluated against the expected set.
+    """
+    expected_items = value.get("expected", [])
+    k = value.get("k", len(expected_items))
+    separator = value.get("separator", r"[,\n]")
+
+    if not expected_items:
+        return 1.0, {}
+
+    predicted_raw = re.split(separator, outcome)
+    predicted_items = [item.strip().lower() for item in predicted_raw if item.strip()]
+    top_k = predicted_items[:k]
+
+    if not top_k:
+        return 0.0, {"error": "no predicted items found in outcome"}
+
+    expected_set = {item.lower() for item in expected_items}
+    hits = sum(1 for item in top_k if item in expected_set)
+    precision = hits / len(top_k)
+
+    return precision, {
+        "k": k,
+        "top_k_count": len(top_k),
+        "hits": hits,
+        "precision_at_k": precision,
+    }
+
+
+def _check_numeric_tolerance(
+    value: dict[str, Any], outcome: str,
+) -> tuple[float, dict[str, Any]]:
+    """Check if a numeric answer is within tolerance of the expected value.
+
+    Used by SpatialBench/scBench for numeric grading, BioML-Bench for
+    ML metric evaluation (AUROC, Spearman, etc.).
+
+    value: {"expected": float, "abs_tol": float, "rel_tol": float}
+    At least one of abs_tol or rel_tol must be specified.
+    If both are specified, the answer passes if EITHER tolerance is met.
+    """
+    expected = value.get("expected")
+    abs_tol = value.get("abs_tol")
+    rel_tol = value.get("rel_tol")
+
+    if expected is None:
+        return 0.0, {"error": "missing 'expected' value"}
+
+    # Extract numbers from outcome
+    numbers = re.findall(r"-?\d+\.?\d*(?:[eE][+-]?\d+)?", outcome)
+    if not numbers:
+        return 0.0, {"error": "no numbers found in outcome"}
+
+    expected_f = float(expected)
+
+    # Check each extracted number
+    for num_str in numbers:
+        num = float(num_str)
+        within_abs = False
+        within_rel = False
+
+        if abs_tol is not None:
+            within_abs = abs(num - expected_f) <= abs_tol
+        if rel_tol is not None and expected_f != 0:
+            within_rel = abs(num - expected_f) / abs(expected_f) <= rel_tol
+
+        if within_abs or within_rel:
+            return 1.0, {
+                "expected": expected_f,
+                "actual": num,
+                "abs_diff": abs(num - expected_f),
+            }
+
+    # Return the closest match details
+    parsed = [float(n) for n in numbers]
+    closest = min(parsed, key=lambda x: abs(x - expected_f))
+    return 0.0, {
+        "expected": expected_f,
+        "closest": closest,
+        "abs_diff": abs(closest - expected_f),
+    }
